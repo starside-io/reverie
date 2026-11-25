@@ -1,6 +1,6 @@
 import { linkOccasion, markOccasionUnavailable, memoriesForOccasion, participantsFrom, OCCASION_URI_PATTERN, PERSON_URI_PREFIX } from "./domain/occasions.js";
 import type { HostPorts, ListenedEventName } from "./ports.js";
-import { countSession, markReadyForExtraction } from "./tools/shared/host-values.js";
+import { countSession, markReadyForExtraction, setTranscriptPointer } from "./tools/shared/host-values.js";
 
 /**
  * The events this module listens to, docs/SPEC.md section 18 "Listened to",
@@ -75,12 +75,21 @@ export async function deliverEvent(
     case "host.session.ended": {
       // Marks the session ready for extraction, and counts it toward
       // consolidateEvery.sessions. A session delivered twice counts once.
+      // With a transcriptPath in the payload (section 19: "with a pointer to
+      // its transcript"), the path is kept beside the marker. Only the path:
+      // nothing here opens or copies the transcript.
       const sessionId = text(payload, "sessionId", "id");
       if (!sessionId) return { event, handled: false, reason: "invalid_payload", detail: { expected: "sessionId" } };
       if (!ports.settings.values) return { event, handled: false, reason: "no_settings_values" };
       const marked = await markReadyForExtraction(ports, sessionId);
       const sessionsSince = marked ? await countSession(ports) : null;
-      return { event, handled: true, detail: { sessionId, readyForExtraction: true, counted: marked, sessionsSince } };
+      const transcriptPath = text(payload, "transcriptPath");
+      const transcript = transcriptPath ? await setTranscriptPointer(ports, sessionId, transcriptPath) : false;
+      return {
+        event,
+        handled: true,
+        detail: { sessionId, readyForExtraction: true, counted: marked, sessionsSince, transcript },
+      };
     }
 
     case "people.person.created": {

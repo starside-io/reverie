@@ -16,22 +16,24 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 
 ## What this command does
 
-Read the argument as one of these and call `memory.browse`:
+Read the argument as one of these and call `memory_browse`:
 
 | Argument looks like | Call |
 | --- | --- |
-| A shelf name or code, `WRK/NST` | `browse { shelf }` |
-| A call number prefix, `LIF/GTH/2026-12` | `browse { prefix }` |
-| A full call number | `browse { around, span: 5 }`: what sits either side of it |
-| Dates, "December", "last summer" | `browse { from, to }`, resolved to calendar dates |
-| `#tag` | `browse { tags }` |
+| A shelf name or code, `WRK/NST` | `memory_browse { shelf }` |
+| A call number prefix, `LIF/GTH/2026-12` | `memory_browse { prefix }` |
+| A full call number | `memory_browse { around, span: 5 }`: what sits either side of it |
+| Dates, "December", "last summer" | `memory_browse { from, to }`, resolved to calendar dates |
+| `#tag` | `memory_browse { tags }` |
 
-With no argument, `memory.shelves`: the sections and shelves with their counts.
+With no argument, `memory_shelves`: the sections and shelves with their counts.
 
 ## Rules
 
 - Browse is never ranked. It returns what is on the shelf in call number
   order, which is section, shelf, time, then sequence.
-- Retired entries are left out unless asked for. Superseded ones are shown,
-  marked, because the order of what was believed is part of the record.
-- Page rather than dumping a long shelf. Say how many more there are.
+- Retired entries are left out unless asked for (`includeRetired: true`).
+  Superseded ones are shown, marked, because the order of what was believed
+  is part of the record.
+- Page rather than dumping a long shelf: `limit`, then pass the returned
+  `nextCursor` as `cursor` for the next page. Say when there are more.

@@ -16,6 +16,11 @@ import type { HostPorts, SettingsValuesPort } from "../../ports.js";
  *                                  (host.session.ended)
  *   sessions.readyForExtraction    session ids marked ready for extraction
  *                                  by host.session.ended, oldest first
+ *   sessions.transcripts           session id to the path of its transcript,
+ *                                  as the host.session.ended payload gave it:
+ *                                  a pointer only, never the transcript text,
+ *                                  kept for the sessions still in the list
+ *                                  above
  *
  * Every reader is lenient: a missing port or a value of the wrong shape reads
  * as unset, so a hand edited row never takes a tool down.
@@ -25,6 +30,10 @@ export const OWNER_LINE_KEY = "core.ownerLine";
 export const CONSOLIDATION_LAST_AT_KEY = "consolidation.lastAt";
 export const CONSOLIDATION_SESSIONS_KEY = "consolidation.sessionsSince";
 export const READY_FOR_EXTRACTION_KEY = "sessions.readyForExtraction";
+export const TRANSCRIPTS_KEY = "sessions.transcripts";
+
+/** The longest transcript pointer kept. A path, not content. Starting value. */
+export const TRANSCRIPT_POINTER_MAX_LENGTH = 4096;
 
 /** The most characters one owner line holds. It is one line in a 40 token slot. Starting value. */
 export const OWNER_LINE_MAX_LENGTH = 300;
@@ -115,5 +124,37 @@ export async function markReadyForExtraction(ports: HostPorts, sessionId: string
   const ready = await readyForExtraction(ports);
   if (ready.includes(sessionId)) return false;
   await values.set(READY_FOR_EXTRACTION_KEY, [...ready, sessionId].slice(-READY_FOR_EXTRACTION_MAX));
+  return true;
+}
+
+/** Session id to transcript path, for the sessions marked ready for extraction. */
+export async function transcriptPointers(ports: HostPorts): Promise<Record<string, string>> {
+  const values = valuesOf(ports);
+  if (!values) return {};
+  const value = await values.get(TRANSCRIPTS_KEY);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
+/**
+ * Keeps where one session's transcript is, beside its ready marker. Only the
+ * path is stored; nothing here opens the file. Pointers for sessions no
+ * longer in the ready list are dropped on the way. False when the pointer is
+ * not a usable path or the host keeps no values.
+ */
+export async function setTranscriptPointer(ports: HostPorts, sessionId: string, path: string): Promise<boolean> {
+  const values = valuesOf(ports);
+  if (!values) return false;
+  const pointer = path.trim();
+  if (pointer.length === 0 || pointer.length > TRANSCRIPT_POINTER_MAX_LENGTH) return false;
+  const ready = new Set(await readyForExtraction(ports));
+  const kept = Object.fromEntries(
+    Object.entries(await transcriptPointers(ports)).filter(([id]) => ready.has(id) && id !== sessionId),
+  );
+  await values.set(TRANSCRIPTS_KEY, { ...kept, [sessionId]: pointer });
   return true;
 }

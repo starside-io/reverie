@@ -214,6 +214,15 @@ describe("the session from the environment", () => {
     });
   });
 
+  it("takes Claude Code's session id when REVERIE_SESSION_ID is not set, and REVERIE_SESSION_ID over it", () => {
+    const claude = "7d3c1f2e-5a4b-4c6d-8e9f-0a1b2c3d4e5f";
+    expect(sessionFromEnvironment({ CLAUDE_CODE_SESSION_ID: claude }, "/nonexistent/elmwood").id).toBe(claude);
+    expect(
+      sessionFromEnvironment({ CLAUDE_CODE_SESSION_ID: claude, REVERIE_SESSION_ID: "session-sam-1" }, "/nonexistent/elmwood")
+        .id,
+    ).toBe("session-sam-1");
+  });
+
   it("makes up a fresh session id per server when none is given, and names no agent", () => {
     const a = sessionFromEnvironment({}, "/nonexistent/elmwood");
     const b = sessionFromEnvironment({}, "/nonexistent/elmwood");

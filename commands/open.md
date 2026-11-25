@@ -1,27 +1,41 @@
 ---
-description: Start the Reverie host and open the library
+description: Start the Reverie host, or find the one already running
 argument-hint: [shelf or call number to open directly]
 allowed-tools:
   - Read
   - Bash
 ---
 
-Start Reverie and open it in the browser, at `$ARGUMENTS` when given.
+Start the Reverie host, or find the one already running. There is no library
+page to open yet.
 
 ## State
 
 The host exists and the UI does not: it arrives at **M6** in
-[`docs/SPEC.md`](../docs/SPEC.md). Starting the host gives `POST /rpc` and
-`/health`, and no page to look at. Say so in one line when asked to open the
-library in a browser.
+[`docs/SPEC.md`](${CLAUDE_PLUGIN_ROOT}/docs/SPEC.md). Starting the host gives
+`POST /rpc`, `/host/review`, `/host/config` and `/health`, and no page to look
+at: `/` answers with a line saying so. When asked to open the library or a
+shelf in a browser, say that in one line and offer `/reverie:browse` for
+`$ARGUMENTS` instead.
 
 ## What this command does
 
 1. Check whether a host is already up before starting a second one:
-   `curl -s localhost:4329/health`. If it answers, reuse it.
-2. Otherwise start it from the repo root. It listens on 4329 unless
-   `REVERIE_PORT` says otherwise, on 127.0.0.1 only.
-3. Report the URL, both file paths and the tool count, which `/health` returns.
+   `curl -s http://127.0.0.1:4329/health` (or the port in `REVERIE_PORT`). If
+   it answers, reuse it.
+2. Otherwise start it from the plugin checkout, in the background so it
+   outlives this turn:
+   `node "${CLAUDE_PLUGIN_ROOT}/apps/reverie/dist/cli.js" serve`.
+   If that file is missing the checkout has not built yet: run
+   `node "${CLAUDE_PLUGIN_ROOT}/scripts/plugin-bootstrap.mjs" build` first (a
+   minute or two). `serve` listens on 127.0.0.1 only, on 4329 unless
+   `REVERIE_PORT` says otherwise, and refuses while another host runs,
+   naming it.
+3. Report the URL, both file paths and the tool count, which `/health`
+   returns.
+4. To stop it, stop the process this command started, by its handle. To
+   restart a host left running on older code:
+   `node "${CLAUDE_PLUGIN_ROOT}/apps/reverie/dist/cli.js" restart`.
 
 ## Port and process rules
 

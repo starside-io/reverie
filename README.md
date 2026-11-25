@@ -11,13 +11,17 @@ One user. No auth. No network. One SQLite file on your machine.
 Sibling to [Fellowship](https://github.com/starside-io/fellowship). Fellowship
 holds the people; Reverie holds what you keep of them and of everything else.
 
-**Status: M3.** The silo, the domain, the 41 tools and the gate suite are in
-`packages/core`. The mini-host in `packages/mini-host` serves them over
-`POST /rpc` on 127.0.0.1 and over stdio MCP, and `apps/reverie` is the
-`reverie` binary. An assistant can remember, browse, recall and forget with no
-UI. There is no UI, no hook and no Fellowship link yet. The build spec is
-[`docs/SPEC.md`](docs/SPEC.md), milestones M0 to M9. The commands and the skill
-in this repo drive those tools; `/reverie:open` has no UI to open until M6.
+**Status: M4, the plugin half.** The silo, the domain, the 41 tools and the
+gate suite are in `packages/core`. The mini-host in `packages/mini-host` serves
+them over `POST /rpc` on 127.0.0.1 and over stdio MCP, and `apps/reverie` is
+the `reverie` binary. The Claude Code plugin is in place: the commands and the
+skill drive those tools, and three hooks add the core block for the project at
+session start, remind the compaction summary to keep session notes, and mark
+a finished session ready for extraction with a pointer to its transcript. A
+second session in the same folder opens knowing what the first pinned. The
+shared kit with Fellowship is not extracted yet. There is no UI (M6) and no
+Fellowship link (M5). The build spec is [`docs/SPEC.md`](docs/SPEC.md),
+milestones M0 to M9.
 
 ## What it does, once built
 
@@ -102,20 +106,13 @@ To list it in a marketplace file you already maintain, add this to its
 | `/reverie:open` | Start the host and open the library |
 | `skills/reverie` | The procedure, including when to call Fellowship |
 
-One file stays an example until the code it calls exists, because a plugin
-that declares a hook which cannot run fails on every session start:
-
-| File | Becomes | At |
-| --- | --- | --- |
-| `hooks/hooks.json.example` | `hooks/hooks.json` | M4, with the plugin bootstrap |
-
 ## Layout
 
 ```
 .claude-plugin/        plugin.json and marketplace.json
 commands/              the eight commands above
 skills/reverie/        SKILL.md
-hooks/                 hooks.json.example
+hooks/                 hooks.json: SessionStart, PreCompact, SessionEnd
 module.json            the host contract manifest: id "memory", 41 tools
 config.schema.json     the config the host stores
 docs/SPEC.md           the build spec, M0 to M9
@@ -125,7 +122,8 @@ docs/SPEC.md           the build spec, M0 to M9
 `packages/core` holds the module: storage, domain, tools and gates.
 `packages/mini-host` is the host: ports, host.db, host.lock, `/rpc` and the
 stdio MCP server. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
-`status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`). Run
+`status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, and
+`hook` for the plugin hooks). Run
 `pnpm install`, `pnpm test`, `pnpm build`, `pnpm db:check`. The rest of
 `packages/` and `apps/` in the spec is not written yet.
 

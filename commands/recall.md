@@ -16,9 +16,9 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 
 ## What this command does
 
-1. `memory.recall` with the text, and any `#tags` as a tag filter.
-2. If the question names a person or a gathering, also `memory.about`, and
-   read Fellowship as the skill describes. The story is in Reverie; who was
+1. `memory_recall` with the text as `query`, and any `#tags` as `tags`.
+2. If the question names a person or a gathering, also `memory_about` with
+   `person` or `occasion`, and read Fellowship as the skill describes. The story is in Reverie; who was
    there and how it went is in Fellowship.
 3. Report each memory with its call number, how old it is, and where it came
    from.
@@ -33,4 +33,5 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 - **Say the age.** A memory confirmed last week and one untouched for a year
   are not the same evidence. If an old memory names a file, a flag or a
   version, check it still holds before relying on it.
-- For "why did you bring that up", `memory.explain` has the numbers.
+- For "why did you bring that up", `memory_explain` with the `call` has the
+  numbers.

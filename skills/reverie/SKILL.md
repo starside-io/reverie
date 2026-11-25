@@ -24,14 +24,15 @@ X" as though a library had been read.
 
 | Door | When | Trust | Path |
 | --- | --- | --- | --- |
-| **The owner said it** | "Remember that...", or a direct answer to "shall I keep this" | `stated` | `memory.remember`, written at once |
-| **A model concluded it** | Anything noticed, inferred, extracted from a session or a file | `confirmed` once reviewed | `memory.draft_context`, then `memory.propose_draft`, then the owner decides |
+| **The owner said it** | "Remember that...", or a direct answer to "shall I keep this" | `stated` | `memory_remember`, written at once |
+| **A model concluded it** | Anything noticed, inferred, extracted from a session or a file | `confirmed` once reviewed | `memory_draft_context`, then `memory_propose_draft`, then the owner decides |
 
 The difference is who is vouching. If the owner did not say it in their own
 words, it is the second door, however obvious it seems.
 
-Six tools need the owner's yes to the exact content first: `forget`, `redact`,
-`promote_procedure`, `merge`, `import`, `decide`. Never set `confirmedByUser`
+Six tools need the owner's yes to the exact content first: `memory_forget`,
+`memory_redact`, `memory_promote_procedure`, `memory_merge`, `memory_import`,
+`memory_decide`. Never set `confirmedByUser`
 because the task was asked for. The owner has to have seen the thing itself.
 
 ## Where a memory goes
@@ -39,7 +40,7 @@ because the task was asked for. The owner has to have seen the thing itself.
 **One shelf, many tags.** The shelf is where it lives. Tags are what else it is
 about.
 
-1. `memory.shelves` and `memory.tags` before proposing either. Choose from what
+1. `memory_shelves` and `memory_tags` before proposing either. Choose from what
    exists. A new tag or a new shelf is allowed and is shown as new in review.
 2. Nothing fits: it goes to Returns. Do not invent a shelf to avoid that.
 3. Tags are lowercase slugs written `#like-this`. `#NightStash` and
@@ -62,10 +63,13 @@ section / shelf / when it happened / order that day
 
 ## Projects
 
-Projects are defined in setup and looked up, never guessed. `memory.projects`
-lists them. A session in a registered folder, or with a git remote that matches
-a project's repository, belongs to that project: its memories are recalled and
-what is remembered is scoped to it. A session anywhere else is global.
+Projects are defined in setup and looked up, never guessed. `memory_projects`
+lists them and says which one this session resolves to. A session in a
+registered folder, or with a git remote that matches a project's repository,
+belongs to that project: its memories are recalled and it fills the core
+block's project slot. What is remembered stays global unless the write says
+otherwise: pass `scope: "project"`, or the project's shelf, to keep a memory
+with the project. A session anywhere else is global.
 
 Do not turn an unregistered folder into a project because its name looks like
 one. Say it is not registered and offer to add it.
@@ -80,11 +84,11 @@ and if the day cannot be worked out, ask rather than guess.
 
 | Want | Tool |
 | --- | --- |
-| What is relevant to this task | `memory.recall` |
-| A shelf, a date range or a tag, in order | `memory.browse` |
-| What else touches this memory | `memory.related` |
-| Everything involving a person or an occasion | `memory.about` |
-| How a memory changed over time | `memory.history` |
+| What is relevant to this task | `memory_recall` |
+| A shelf, a date range or a tag, in order | `memory_browse` |
+| What else touches this memory | `memory_related` |
+| Everything involving a person or an occasion | `memory_about` |
+| How a memory changed over time | `memory_history` |
 
 Reading what comes back:
 
@@ -94,7 +98,7 @@ Reading what comes back:
 - **Check the age.** Every item says how old it is and when it was last
   confirmed. If an old one names a file, a flag, a version or a person's
   circumstances, verify before relying on it.
-- When a memory turns out to be still true, `memory.touch` it. That is what
+- When a memory turns out to be still true, `memory_touch` it. That is what
   keeps a correct old memory ranking well.
 - When one turns out to be wrong, say so and propose the fix. Do not quietly
   work around it.
@@ -126,12 +130,12 @@ Reverie and Fellowship never call each other. You are the bridge: you make one
 call to each and carry the id across.
 
 - **The owner told the story:** show the whole bundle, take one yes, then
-  `people.log_interaction`, read back the occasion id, then `memory.remember`
+  `people_log_interaction`, read back the occasion id, then `memory_remember`
   with that id. No review queue is involved.
 - **You inferred it** (from a transcript or a file): propose the episode to
   Reverie only, with the occasion as its pending payload. When the owner
-  confirms, `memory.decide` returns a `followUp`. Run it, then
-  `memory.link_occasion`. If Fellowship is not there, leave it: the memory is
+  confirms, `memory_decide` returns a `followUp`. Run it, then
+  `memory_link_occasion`. If Fellowship is not there, leave it: the memory is
   complete without it.
 
 ### Writing one
@@ -139,13 +143,13 @@ call to each and carry the id across.
 When the owner tells a story with people in it:
 
 1. Draft the episode: what happened, the date, the place.
-2. Resolve every name with `people.resolve_person`. `ambiguous` means ask which
+2. Resolve every name with `people_resolve_person`. `ambiguous` means ask which
    one. `none` means offer to add them. Never invent a person, and never pick.
 3. Check Fellowship for an occasion already logged with those people on that
    day. If there is one, link to it. Do not log a second.
-4. Propose it as **one group**: the occasion (`people.log_interaction`), the
-   episode (`memory.remember` with attendees and the occasion), and a note for
-   any fact that is really about one person (`people.add_note`).
+4. Propose it as **one group**: the occasion (`people_log_interaction`), the
+   episode (`memory_remember` with attendees and the occasion), and a note for
+   any fact that is really about one person (`people_add_note`).
 5. On confirmation the occasion commits first, so its id exists for the memory
    to carry.
 
@@ -156,8 +160,8 @@ add a bystander to a conflict.
 ### Reading one
 
 Asked about a person, a meetup, or "when did I last see": call both.
-`memory.about` for the stories, Fellowship's `people.timeline` and
-`people.insights` for the record. Report them together and say which part came
+`memory_about` for the stories, Fellowship's `people_timeline` and
+`people_insights` for the record. Report them together and say which part came
 from where.
 
 ### Without Fellowship
@@ -177,15 +181,16 @@ treat a missing people module as an error.
   sexuality: only when the owner explicitly asks for it to be kept.
 - **A memory with no source.** Every memory carries where it came from and a
   short quote. No source, no memory.
-- **Facts about other people.** Those belong in Fellowship. A draft that is
-  really a person fact comes back routed there.
+- **Facts about other people.** Those belong in Fellowship, as a note on that
+  person (`people_add_note`). Do not draft them into Reverie: nothing here
+  routes them across for you.
 
 ## Procedures are special
 
 A procedure is a standing rule for how to work for the owner. It changes every
 later session, which makes it the most valuable thing to get right and the
 most dangerous thing to get wrong. A model cannot write one alone:
-`memory.promote_procedure` needs the owner's yes to the exact wording, with the
+`memory_promote_procedure` needs the owner's yes to the exact wording, with the
 why and the how to apply stated.
 
 ## Retire is not forget
@@ -199,9 +204,16 @@ why and the how to apply stated.
 ## At the end of a session
 
 Before the context is summarised or the session ends, put anything worth
-keeping into `memory.session_note`: decisions made, preferences stated,
-corrections given. Notes are scratch. They are the raw material for the
-extract job and are never recalled as memories themselves.
+keeping into `memory_session_note`: decisions made, preferences stated,
+corrections given. Notes are scratch held against this session, expire after
+`sessionNoteTtlHours`, and are never recalled as memories. When the session
+ends it is marked ready for extraction, with a pointer to its transcript.
+
+Today no tool hands the notes or the transcript back: the extract job
+(`memory_draft_context { job: "extract" }`) reads only the turns or the file
+you pass it as `material`. So what must outlive the session goes through a
+door now: `memory_remember` for what the owner said to keep, or the extract
+job over the turns in this conversation, then `memory_propose_draft`.
 
 ## Incognito
 

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { history } from "../src/domain/versions.js";
 import { LISTENED_EVENTS } from "../src/listeners.js";
-import { READY_FOR_EXTRACTION_KEY } from "../src/tools/shared/host-values.js";
+import { READY_FOR_EXTRACTION_KEY, TRANSCRIPTS_KEY } from "../src/tools/shared/host-values.js";
 import type { RememberResult } from "../src/tools/write/remember.js";
 import { PEOPLE, testHost, type TestHost } from "./test-host.js";
 
@@ -61,11 +61,18 @@ describe("listened events", () => {
       expect(first).toEqual({
         event: "host.session.ended",
         handled: true,
-        detail: { sessionId: "session-1", readyForExtraction: true, counted: true, sessionsSince: 1 },
+        detail: { sessionId: "session-1", readyForExtraction: true, counted: true, sessionsSince: 1, transcript: false },
       });
       const again = await host.api.deliver("host.session.ended", { sessionId: "session-1" });
       expect(again).toMatchObject({ handled: true, detail: { counted: false, sessionsSince: null } });
       expect(host.values.get(READY_FOR_EXTRACTION_KEY)).toEqual(["session-1"]);
+    });
+
+    it("keeps a pointer to the transcript beside the marker, and only the pointer", async () => {
+      const path = "/tmp/elmwood/transcripts/session-2.jsonl";
+      const result = await host.api.deliver("host.session.ended", { sessionId: "session-2", transcriptPath: path });
+      expect(result).toMatchObject({ handled: true, detail: { sessionId: "session-2", transcript: true } });
+      expect(host.values.get(TRANSCRIPTS_KEY)).toEqual({ "session-2": path });
     });
 
     it("marks nothing while incognito is on", async () => {

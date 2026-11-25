@@ -7,6 +7,7 @@ export {
   consolidationDue,
   readConsolidation,
   readyForExtraction,
+  transcriptPointers,
   type ConsolidationState,
 } from "./host-values.js";
 export {

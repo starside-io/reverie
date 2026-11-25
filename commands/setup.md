@@ -15,11 +15,13 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 
 ## What this command does
 
-1. `memory.shelves` to see what is there. A fresh silo has the seeded set:
+1. `memory_shelves` to see what is there. A fresh silo has the seeded set:
    Work, Life, Craft, Reference and a front desk with a Returns shelf.
 2. Ask what the owner actually wants on the shelves: their projects, the parts
-   of life worth keeping apart. Adjust with `memory.set_shelves`. Give each
-   shelf a one line description written for whoever shelves into it later.
+   of life worth keeping apart. Adjust with `memory_set_shelves` (`action`:
+   `create_section`, `create_shelf`, `rename_shelf`, `merge_shelves` and the
+   rest). Give each new shelf a one line `description` written for whoever
+   shelves into it later.
 3. **Define the projects.** Ask where the list comes from:
    - a GitHub account or organisation: list its repositories with your own
      tools (Reverie reaches no network), let the owner pick, then ask which
@@ -27,15 +29,21 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
    - a README or other file that lists current projects: read it and propose
      one project per entry.
    - by hand.
-   Write each with `memory.set_projects`: slug, name, repository, the shelf
-   and tag it gets, and its local folders. Show the shelf and tag before
-   making them.
-4. Offer to bring in an existing memory folder (markdown files with an index).
-   That is `memory.import`, it needs a yes, and it shows the counts first.
+   Show the shelf and tag a project would get with `memory_set_projects
+   { action: "propose" }`, then write it with `{ action: "create" }`: slug,
+   name, `repoUrl`, the shelf and tag, and its local `folders`. `memory_projects`
+   lists what is registered and which project this session resolves to.
+4. Offer to bring in an existing Reverie snapshot file. That is
+   `memory_import { from: "snapshot", snapshot }` in merge mode, with the
+   file's JSON as `snapshot`, and it needs a yes. A markdown folder or a
+   Claude Code memory directory cannot be imported yet: say so rather than
+   copying files in by hand.
 5. Say whether Fellowship is installed, because that decides whether people in
    a memory become references or stay as names.
 6. Explain the two settings that change how it feels: auto-accept (off by
-   default) and incognito.
+   default) and incognito. No tool changes settings: they are the host's
+   config, read and set at `/host/config` on a running `reverie serve`
+   (see `/reverie:open`).
 
 ## Rules
 
@@ -46,4 +54,5 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 - Local folder paths stay on this machine. They are not part of an export.
 - Do not create shelves speculatively. An empty building with a Returns shelf
   works; shelves are cheap to add when the first memory needs one.
-- Import merges. It never replaces without naming what it would destroy.
+- Import merges. A replace runs a `dryRun` first, shows the owner
+  `wouldDestroy`, and only then runs with the acknowledgement it returned.

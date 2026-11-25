@@ -20,6 +20,8 @@ import {
   type MiniHost,
 } from "@reverie/mini-host";
 
+import { readStdin, runHook } from "./hook.js";
+
 /**
  * The standalone binary. docs/SPEC.md section 21. Lifted from Fellowship's
  * apps/fellowship/src/cli.ts.
@@ -29,6 +31,7 @@ import {
  *   reverie status    where the files are, and what is in them
  *   reverie tools     the surface, one line each
  *   reverie restart   stop the running host and start it again on this code
+ *   reverie hook      one Claude Code plugin hook, reading its JSON on stdin
  *
  * plus the maintenance commands: verify, import, export, reindex, dream. Each
  * one goes through the registry or through a core storage function: none
@@ -58,6 +61,10 @@ export const USAGE = `reverie <command>
                            check it. For a file restored from a backup.
   dream                    Whether a consolidation pass is due. The library
                            never calls a model: an assistant runs the pass.
+  hook <event>             One Claude Code plugin hook: session-start,
+                           pre-compact or session-end. Reads the hook JSON on
+                           stdin, prints the hook payload or nothing, and
+                           always exits 0.
 `;
 
 export interface Io {
@@ -65,6 +72,8 @@ export interface Io {
   cwd: string;
   out(text: string): void;
   err(text: string): void;
+  /** All of stdin, for `hook`. Absent reads as empty. */
+  stdin?: () => Promise<string>;
 }
 
 export const processIo: Io = {
@@ -72,6 +81,7 @@ export const processIo: Io = {
   cwd: process.cwd(),
   out: (text) => void process.stdout.write(text),
   err: (text) => void process.stderr.write(text),
+  stdin: () => readStdin(),
 };
 
 function portFrom(argv: string[]): number | undefined {
@@ -176,6 +186,13 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
 
     case "dream":
       return dream(io);
+
+    case "hook": {
+      // stdout is the hook payload here, and a hook never fails the session:
+      // runHook always answers 0, with its payload or with nothing.
+      const stdin = io.stdin ? await io.stdin().catch(() => "") : "";
+      return runHook(argv[1], stdin, io);
+    }
 
     case "--help":
     case "-h":
