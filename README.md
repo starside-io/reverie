@@ -11,11 +11,13 @@ One user. No auth. No network. One SQLite file on your machine.
 Sibling to [Fellowship](https://github.com/starside-io/fellowship). Fellowship
 holds the people; Reverie holds what you keep of them and of everything else.
 
-**Status: M0.** The workspace and the silo exist: schema, pragmas, migrations
-and FTS5, in `packages/core`. Nothing above storage is written yet. The build
-spec is [`docs/SPEC.md`](docs/SPEC.md), milestones M0 to M9. The commands and
-the skill in this repo describe what they will do and say so plainly rather
-than pretending.
+**Status: M3.** The silo, the domain, the 41 tools and the gate suite are in
+`packages/core`. The mini-host in `packages/mini-host` serves them over
+`POST /rpc` on 127.0.0.1 and over stdio MCP, and `apps/reverie` is the
+`reverie` binary. An assistant can remember, browse, recall and forget with no
+UI. There is no UI, no hook and no Fellowship link yet. The build spec is
+[`docs/SPEC.md`](docs/SPEC.md), milestones M0 to M9. The commands and the skill
+in this repo drive those tools; `/reverie:open` has no UI to open until M6.
 
 ## What it does, once built
 
@@ -100,12 +102,11 @@ To list it in a marketplace file you already maintain, add this to its
 | `/reverie:open` | Start the host and open the library |
 | `skills/reverie` | The procedure, including when to call Fellowship |
 
-Two files stay as examples until the code they call exists, because a plugin
-that declares a server or a hook which cannot run fails on every session start:
+One file stays an example until the code it calls exists, because a plugin
+that declares a hook which cannot run fails on every session start:
 
 | File | Becomes | At |
 | --- | --- | --- |
-| `.mcp.json.example` | `.mcp.json` | M3, with the stdio server |
 | `hooks/hooks.json.example` | `hooks/hooks.json` | M4, with the plugin bootstrap |
 
 ## Layout
@@ -118,12 +119,15 @@ hooks/                 hooks.json.example
 module.json            the host contract manifest: id "memory", 41 tools
 config.schema.json     the config the host stores
 docs/SPEC.md           the build spec, M0 to M9
-.mcp.json.example      the bundled MCP server, from M3
+.mcp.json              the bundled MCP server
 ```
 
-`packages/core` holds the storage layer only (`pnpm install`, `pnpm test`,
-`pnpm db:check`). The rest of `packages/` and `apps/` in the spec is not
-written yet.
+`packages/core` holds the module: storage, domain, tools and gates.
+`packages/mini-host` is the host: ports, host.db, host.lock, `/rpc` and the
+stdio MCP server. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
+`status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`). Run
+`pnpm install`, `pnpm test`, `pnpm build`, `pnpm db:check`. The rest of
+`packages/` and `apps/` in the spec is not written yet.
 
 ## Two manifests, on purpose
 

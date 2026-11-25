@@ -1,0 +1,31 @@
+{
+  "name": "reverie",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The standalone binary: serve, mcp and the maintenance commands over the mini-host.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "reverie": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/cli.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@reverie/core": "workspace:*",
+    "@reverie/mini-host": "workspace:*"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@types/node": "26.6.6",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  },
+  "files": [
+    "dist"
+  ]
+}

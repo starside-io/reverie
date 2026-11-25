@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "types": ["node"],
+    "paths": {
+      "@reverie/core": ["../../packages/core/src/index.ts"],
+      "@reverie/core/*": ["../../packages/core/src/*"],
+      "@reverie/mini-host": ["../../packages/mini-host/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests", "vitest.config.ts"]
+}

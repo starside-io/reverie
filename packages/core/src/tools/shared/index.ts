@@ -4,6 +4,12 @@
 export { enforceDiscipline, refuseFindings } from "./discipline.js";
 export { callSchema, confirmedByUser } from "./inputs.js";
 export {
+  consolidationDue,
+  readConsolidation,
+  readyForExtraction,
+  type ConsolidationState,
+} from "./host-values.js";
+export {
   isWithin,
   longestPathMatch,
   normaliseFolder,

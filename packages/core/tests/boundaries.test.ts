@@ -84,6 +84,7 @@ describe("core's imports", () => {
       "next",
       "@reverie/ui",
       "@reverie/mini-host",
+      "reverie",
       "@reverie/adapter-memory-tool",
       "@reverie/adapter-markdown",
       "@fellowship/ui",
@@ -92,6 +93,7 @@ describe("core's imports", () => {
       "tiptap",
       "sharp",
       "hono",
+      "@hono/node-server",
       "@modelcontextprotocol/sdk",
     ];
     const offenders: string[] = [];

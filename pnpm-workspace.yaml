@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - apps/*
 
 # pnpm 10 blocks install scripts by default. These need theirs: Prisma places
 # its query engine, esbuild its platform binary.

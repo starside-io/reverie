@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "reverie": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/plugin-bootstrap.mjs", "mcp"],
+      "env": {
+        "REVERIE_DB_PATH": "${REVERIE_DB_PATH:-}"
+      }
+    }
+  }
+}

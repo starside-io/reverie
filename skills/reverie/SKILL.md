@@ -13,13 +13,12 @@ SQLite file, no network.
 Read [`docs/SPEC.md`](../../docs/SPEC.md) for the whole design. This skill is
 the procedure for using it.
 
-## Scaffold state
+## If the tools are missing
 
-The tools are specified and not built. They arrive at **M2** and become
-reachable from a session at **M3**. Until then this skill documents the
-procedure and nothing in it should be simulated: do not keep memories in a
-scratch file, and do not answer "what do you know about X" as though a library
-had been read.
+The procedure runs on the `memory_*` tools of the bundled MCP server. If they
+are not available in a session, nothing in this skill should be simulated: do
+not keep memories in a scratch file, and do not answer "what do you know about
+X" as though a library had been read.
 
 ## Two doors
 

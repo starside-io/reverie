@@ -3,6 +3,7 @@
 // a catalogue tag and a snapshot tag) without one shadowing the other.
 export * as callNumber from "./catalogue/call-number.js";
 export * as discipline from "./discipline.js";
+export * as embeddings from "./embeddings.js";
 export * as drafting from "./drafting/index.js";
 export * as links from "./links.js";
 export * as memories from "./memories.js";

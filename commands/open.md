@@ -8,13 +8,14 @@ allowed-tools:
 
 Start Reverie and open it in the browser, at `$ARGUMENTS` when given.
 
-## Scaffold state
+## State
 
-There is no app to start yet. The host arrives at **M3** and the UI at **M6**
-in [`docs/SPEC.md`](../docs/SPEC.md). Until then: say so in one line and
-stop. Do not run a package manager and do not start a server on a guessed port.
+The host exists and the UI does not: it arrives at **M6** in
+[`docs/SPEC.md`](../docs/SPEC.md). Starting the host gives `POST /rpc` and
+`/health`, and no page to look at. Say so in one line when asked to open the
+library in a browser.
 
-## What this command does once the app exists
+## What this command does
 
 1. Check whether a host is already up before starting a second one:
    `curl -s localhost:4329/health`. If it answers, reuse it.

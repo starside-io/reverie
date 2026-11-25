@@ -6,16 +6,14 @@ allowed-tools:
 
 Set up the owner's library in Reverie.
 
-## Scaffold state
+## If the tools are missing
 
-The tools this command drives do not exist yet. They arrive at **M2** in
-[`docs/SPEC.md`](../docs/SPEC.md) and become reachable from a session at
-**M3**, when `.mcp.json.example` is renamed to `.mcp.json`. Until then: say so
-in one line and stop. Do not write the memory to a file, a note, or anywhere
-else instead. A memory kept somewhere Reverie cannot see is a memory that is
-never recalled, reviewed or forgotten.
+This command drives the `memory_*` tools of the bundled MCP server. If they
+are not available in this session: say so in one line and stop. Do not write
+the memory to a file, a note, or anywhere else instead. A memory kept somewhere
+Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 
-## What this command does once the tools exist
+## What this command does
 
 1. `memory.shelves` to see what is there. A fresh silo has the seeded set:
    Work, Life, Craft, Reference and a front desk with a Returns shelf.
