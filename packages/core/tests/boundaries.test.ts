@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
-const ALLOWED_PACKAGES = new Set(["zod"]);
+const ALLOWED_PACKAGES = new Set(["zod", "zod-to-json-schema"]);
 const GENERATED_CLIENT = /^(\.\.\/)+generated\/prisma\/index\.js$/;
 
 function sourceFiles(dir: string): string[] {

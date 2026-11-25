@@ -186,7 +186,7 @@ model MemoryVersion {
   /// No relation on purpose: versions outlive a forgotten memory, redacted.
   memoryId      String
   /// VersionOperation: create | update | refine | supersede | shelve | retire |
-  /// redact | forget. Starting value.
+  /// redact | forget | merge. Starting value.
   operation     String
   /// Who made the change: "user", "proposal:<id>", "import". Starting value.
   actor         String

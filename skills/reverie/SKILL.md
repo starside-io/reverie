@@ -206,8 +206,9 @@ extract job and are never recalled as memories themselves.
 
 ## Incognito
 
-When it is on, every read is empty and every write is refused. Say that it is
-on. Do not try to route around it.
+When it is on, no capture runs, no session is marked for extraction, and every
+write is refused with the reason; reads still answer. Say that it is on. Do
+not try to route around it.
 
 ## The data is real
 

@@ -3,6 +3,7 @@ import { resolveDbPath } from "./paths.js";
 import { openSilo } from "./client.js";
 import { readPragma } from "./pragmas.js";
 import { SEARCH_TABLES } from "./search-sql.js";
+import { searchIntegrity, type SearchIntegrity } from "./search-index.js";
 
 export interface SiloReport {
   path: string;
@@ -15,6 +16,8 @@ export interface SiloReport {
   missingChecks: string[];
   /** FTS5 tables the migrations should have created and did not. */
   missingSearchTables: string[];
+  /** Whether memory_fts matches the Memory rows. Null when the table is missing. */
+  searchIntegrity: SearchIntegrity | null;
 }
 
 /**
@@ -45,6 +48,7 @@ export async function checkSilo(path: string = resolveDbPath()): Promise<SiloRep
       tables: [...definitions.keys()].filter((name) => !name.startsWith("sqlite_")),
       missingChecks,
       missingSearchTables,
+      searchIntegrity: missingSearchTables.length === 0 ? await searchIntegrity(db) : null,
     };
   } finally {
     await db.$disconnect();

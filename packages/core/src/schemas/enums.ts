@@ -21,6 +21,14 @@ export type MemoryScope = z.infer<typeof MemoryScope>;
 export const TrustTier = z.enum(["stated", "confirmed", "inferred", "external"]);
 export type TrustTier = z.infer<typeof TrustTier>;
 
+/** Trust tiers, most trusted first: the order every "least trusted of" compares by. */
+export const TRUST_ORDER: readonly TrustTier[] = TrustTier.options;
+
+/** The less trusted of two tiers. */
+export function worseTrust(a: TrustTier, b: TrustTier): TrustTier {
+  return TRUST_ORDER.indexOf(a) >= TRUST_ORDER.indexOf(b) ? a : b;
+}
+
 /**
  * The lifecycle states a Memory row can be in. `proposed` lives in the host's
  * review queue and `forgotten` has no row, so neither is a column value.
@@ -42,6 +50,7 @@ export const VersionOperation = z.enum([
   "retire",
   "redact",
   "forget",
+  "merge",
 ]);
 export type VersionOperation = z.infer<typeof VersionOperation>;
 

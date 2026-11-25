@@ -135,6 +135,7 @@ describe("checkSilo", () => {
     expect(report.missingSearchTables).toEqual([]);
     expect(report.tables).toContain("Memory");
     expect(report.tables).toContain("memory_fts");
+    expect(report.searchIntegrity).toEqual({ status: "ok" });
   });
 
   it("names what is missing on a file that was never migrated", async () => {
@@ -142,5 +143,6 @@ describe("checkSilo", () => {
     const report = await checkSilo(path);
     expect(report.missingChecks.length).toBeGreaterThan(0);
     expect(report.missingSearchTables).toEqual(["memory_fts"]);
+    expect(report.searchIntegrity).toBeNull();
   });
 });

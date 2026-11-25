@@ -64,6 +64,13 @@ export interface ImportResult {
    * re-embed hook computes them; the snapshot carries no vectors.
    */
   needsEmbedding: string[];
+  /**
+   * Every memory the import created or whose content it changed, by id, in
+   * the file's order: what `memory.memory.written` is emitted for once the
+   * transaction has committed. A memory the file holds exactly as the silo
+   * already did is not in it.
+   */
+  written: Array<{ memoryId: string; operation: "create" | "update" }>;
 }
 
 export interface ImportOptions {
@@ -322,7 +329,13 @@ async function createMany<T>(rows: T[], write: (data: T[]) => Promise<unknown>):
   return rows.length;
 }
 
-async function insertAll(tx: Tx, snapshot: ParsedSnapshot): Promise<{ counts: ImportCounts; needsEmbedding: string[] }> {
+type Written = ImportResult["written"];
+
+async function insertAll(
+  tx: Tx,
+  snapshot: ParsedSnapshot,
+  before: ReadonlyMap<string, string>,
+): Promise<{ counts: ImportCounts; needsEmbedding: string[]; written: Written }> {
   const counts = emptyCounts();
   const slugs = new Map(snapshot.tags.map((tag) => [tag.id, tag.slug]));
 
@@ -364,7 +377,15 @@ async function insertAll(tx: Tx, snapshot: ParsedSnapshot): Promise<{ counts: Im
   counts.aliases = await createMany(snapshot.aliases, (data) => tx.callNumberAlias.createMany({ data }));
   counts.links = await createMany(snapshot.links, (data) => tx.memoryLink.createMany({ data }));
 
-  return { counts, needsEmbedding: snapshot.memories.map((memory) => memory.id) };
+  // Written: new ids, and ids whose content differs from what the silo held before the replace.
+  const written: Written = [];
+  for (const memory of snapshot.memories) {
+    const hashBefore = before.get(memory.id);
+    if (hashBefore === undefined) written.push({ memoryId: memory.id, operation: "create" });
+    else if ((await contentHash(tx, memory.id)) !== hashBefore) written.push({ memoryId: memory.id, operation: "update" });
+  }
+
+  return { counts, needsEmbedding: snapshot.memories.map((memory) => memory.id), written };
 }
 
 /* ------------------------------------------------------------------ */
@@ -497,7 +518,7 @@ async function mergeAll(
   tx: Tx,
   snapshot: ParsedSnapshot,
   options: Required<ImportOptions>,
-): Promise<{ counts: ImportCounts; needsEmbedding: string[] }> {
+): Promise<{ counts: ImportCounts; needsEmbedding: string[]; written: Written }> {
   const counts = emptyCounts();
   const needsEmbedding: string[] = [];
   const { shelfMap, tagMap } = await mergeLibrary(tx, snapshot, counts);
@@ -625,9 +646,11 @@ async function mergeAll(
   // overwrite). The file's versions usually already record what the merge
   // wrote; when none does, one version records the import.
   const mutation = { actor: options.actor, at: options.at };
+  const changed = new Set<string>();
   for (const [memoryId, hashBefore] of before) {
     const hashAfter = await contentHash(tx, memoryId);
     if (hashAfter === hashBefore) continue;
+    changed.add(memoryId);
     const recorded = await tx.memoryVersion.count({ where: { memoryId, contentSha256: hashAfter } });
     if (recorded > 0) continue;
     await appendVersion(tx, memoryId, { ...mutation, operation: "update" });
@@ -639,7 +662,14 @@ async function mergeAll(
     counts.versionsAppended += 1;
   }
 
-  return { counts, needsEmbedding };
+  const made = new Set(created);
+  const written: Written = live.flatMap((memory): Written => {
+    if (made.has(memory.id)) return [{ memoryId: memory.id, operation: "create" }];
+    if (changed.has(memory.id)) return [{ memoryId: memory.id, operation: "update" }];
+    return [];
+  });
+
+  return { counts, needsEmbedding, written };
 }
 
 /* ------------------------------------------------------------------ */
@@ -680,11 +710,46 @@ export async function importSnapshot(
   return atomic(db, async (tx) => {
     if (parsedMode === "replace") {
       const destroyed = await planReplace(tx);
+      const before = new Map<string, string>();
+      for (const { id } of await tx.memory.findMany({ select: { id: true } })) before.set(id, await contentHash(tx, id));
       await deleteEverything(tx);
-      const written = await insertAll(tx, snapshot);
+      const written = await insertAll(tx, snapshot, before);
       return { mode: parsedMode, destroyed, ...written };
     }
     const written = await mergeAll(tx, snapshot, resolved);
     return { mode: parsedMode, destroyed: null, ...written };
+  });
+}
+
+/**
+ * The memories an import will need a vector for, with the text to embed,
+ * read before the import's transaction opens so the vectors can be computed
+ * with no writer held (section 13). A replace writes every memory in the
+ * file afresh. A merge writes the ones the silo does not hold yet and the
+ * ones whose title or body differs, and never one this silo has forgotten:
+ * a forgotten memory's text is not handed to a model.
+ */
+export async function importEmbeddingCandidates(
+  db: Db,
+  input: unknown,
+  mode: ImportMode,
+): Promise<Array<{ memoryId: string; title: string; body: string }>> {
+  const snapshot = parseInput(snapshotSchema, input);
+  const all = snapshot.memories.map((memory) => ({ memoryId: memory.id, title: memory.title, body: memory.body }));
+  if (parseInput(importModeSchema, mode) === "replace") return all;
+
+  const skipped = await forgottenInSilo(db, snapshot.memories);
+  const held = new Map(
+    (
+      await db.memory.findMany({
+        where: { id: { in: snapshot.memories.map((memory) => memory.id) } },
+        select: { id: true, title: true, body: true },
+      })
+    ).map((row) => [row.id, row]),
+  );
+  return all.filter((memory) => {
+    if (skipped.has(memory.memoryId)) return false;
+    const row = held.get(memory.memoryId);
+    return !row || row.title !== memory.title || row.body !== memory.body;
   });
 }

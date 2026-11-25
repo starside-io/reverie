@@ -88,7 +88,7 @@
     "incognito": {
       "type": "boolean",
       "default": false,
-      "description": "While true every read returns empty and every write is refused. The audit log records only that it was on."
+      "description": "The pause switch. While true no capture runs, no session is marked for extraction, and every write tool refuses with the reason; reads still answer."
     }
   }
 }

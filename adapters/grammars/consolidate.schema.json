@@ -1,0 +1,108 @@
+{
+  "type": "object",
+  "properties": {
+    "actions": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "merge"
+              },
+              "survivor": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}\\/[A-Z]{3}\\/\\d{4}-\\d{2}-\\d{2}\\/\\d{3}$"
+              },
+              "absorbed": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}\\/[A-Z]{3}\\/\\d{4}-\\d{2}-\\d{2}\\/\\d{3}$"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              }
+            },
+            "required": [
+              "action",
+              "survivor",
+              "absorbed",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "retire"
+              },
+              "call": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}\\/[A-Z]{3}\\/\\d{4}-\\d{2}-\\d{2}\\/\\d{3}$"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              }
+            },
+            "required": [
+              "action",
+              "call",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "const": "link"
+              },
+              "from": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}\\/[A-Z]{3}\\/\\d{4}-\\d{2}-\\d{2}\\/\\d{3}$"
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}\\/[A-Z]{3}\\/\\d{4}-\\d{2}-\\d{2}\\/\\d{3}$"
+              },
+              "relation": {
+                "type": "string",
+                "enum": [
+                  "contradicts",
+                  "elaborates"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              }
+            },
+            "required": [
+              "action",
+              "from",
+              "to",
+              "relation",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "maxItems": 40
+    }
+  },
+  "required": [
+    "actions"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

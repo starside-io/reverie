@@ -283,6 +283,8 @@ export interface ForgetResult {
   retiredNumbers: string[];
   /** Sources cited by no other memory, deleted with it. */
   sourcesDeleted: number;
+  /** Its tags that no other memory carries and no project points at, deleted with it. */
+  tagsDeleted: number;
 }
 
 /**
@@ -291,7 +293,10 @@ export interface ForgetResult {
  * current number and every alias stay in CallNumberAlias pointing at nothing,
  * so none is ever reissued. Every version keeps operation, actor and time and
  * loses its content. A Source cited by no other memory goes too, so nothing
- * forgotten survives in a label. Starting value for that last part.
+ * forgotten survives in a label. Starting value for that last part. A tag the
+ * forgotten memory carried that no memory carries any more and no project
+ * points at goes the same way, so its slug does not outlive it in the
+ * vocabulary. Only forget does this: a tag emptied by detach or merge stays.
  *
  * Takes a memory id or a call number (current or alias).
  */
@@ -304,7 +309,12 @@ export async function forgetMemory(
     const memoryId = await memoryIdOf(tx, memory);
     const row = await tx.memory.findUnique({
       where: { id: memoryId },
-      select: { id: true, callNumber: true, sources: { select: { sourceId: true } } },
+      select: {
+        id: true,
+        callNumber: true,
+        sources: { select: { sourceId: true } },
+        tags: { select: { tagId: true } },
+      },
     });
     if (!row) throw new DomainError("not_found", `No memory with id ${memoryId}.`);
 
@@ -326,11 +336,22 @@ export async function forgetMemory(
       }
     }
 
+    let tagsDeleted = 0;
+    for (const { tagId } of row.tags) {
+      const stillCarried = await tx.memoryTag.count({ where: { tagId } });
+      const projects = await tx.project.count({ where: { tagId } });
+      if (stillCarried === 0 && projects === 0) {
+        await tx.tag.delete({ where: { id: tagId } });
+        tagsDeleted += 1;
+      }
+    }
+
     return {
       memoryId,
       callNumber: row.callNumber,
       retiredNumbers: [row.callNumber, ...oldNumbers].sort(compareText),
       sourcesDeleted,
+      tagsDeleted,
     };
   });
 }

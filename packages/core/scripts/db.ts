@@ -146,6 +146,13 @@ switch (command) {
       process.exit(1);
     }
     process.stdout.write("search         all present\n");
+    if (report.searchIntegrity?.status !== "ok") {
+      process.stderr.write(
+        `Search index drifted: ${report.searchIntegrity?.detail ?? "not checked"}. Rebuild it with reindexSearch.\n`,
+      );
+      process.exit(1);
+    }
+    process.stdout.write("search index   ok\n");
     break;
   }
 

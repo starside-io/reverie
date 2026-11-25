@@ -118,4 +118,70 @@ describe("migrateSilo", () => {
     const result = migrateSilo(path);
     expect(result.unknown).toEqual(["29991231000000_from_the_future"]);
   });
+
+  it("upgrades a silo that holds version rows across the merge operation rebuild without losing a row", () => {
+    const all = readMigrations();
+    const rebuild = all.findIndex((migration) => migration.name.endsWith("_merge_version_operation"));
+    expect(rebuild).toBeGreaterThan(0);
+
+    // A migrations directory as it stood before the rebuild.
+    const before = mkdtempSync(join(tmpdir(), "reverie-migrations-"));
+    for (const migration of all.slice(0, rebuild)) {
+      cpSync(join(defaultMigrationsDir(), migration.name), join(before, migration.name), { recursive: true });
+    }
+
+    const path = throwawayPath();
+    expect(migrateSilo(path, { migrationsDir: before }).applied).toEqual(all.slice(0, rebuild).map((m) => m.name));
+
+    const rows = [
+      ["v-1", "m-jane", "create", "user", "aaa", '{"body":"Jane Doe hosted."}', "2026-12-24 10:00:00"],
+      ["v-2", "m-jane", "update", "proposal:p1", "bbb", '{"body":"Jane Doe hosted dinner."}', "2026-12-25 10:00:00"],
+      ["v-3", "m-sam", "supersede", "user", null, null, "2026-12-26 10:00:00"],
+      ["v-4", "m-gone", "forget", "user", null, null, "2026-12-27 10:00:00"],
+    ] as const;
+    const seeded = new DatabaseSync(path);
+    try {
+      expect(() =>
+        seeded
+          .prepare(`INSERT INTO "MemoryVersion" ("id", "memoryId", "operation", "actor") VALUES ('v-x', 'm-x', 'merge', 'user')`)
+          .run(),
+      ).toThrow(/CHECK constraint failed/);
+      for (const row of rows) {
+        seeded
+          .prepare(
+            `INSERT INTO "MemoryVersion" ("id", "memoryId", "operation", "actor", "contentSha256", "body", "at") VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(...row);
+      }
+    } finally {
+      seeded.close();
+    }
+
+    const upgrade = migrateSilo(path);
+    expect(upgrade.applied).toEqual(all.slice(rebuild).map((m) => m.name));
+    expect(upgrade.changed).toEqual([]);
+
+    const db = new DatabaseSync(path);
+    try {
+      const after = db
+        .prepare(
+          `SELECT "id", "memoryId", "operation", "actor", "contentSha256", "body", "at" FROM "MemoryVersion" ORDER BY "id"`,
+        )
+        .all() as Array<Record<string, unknown>>;
+      expect(after.map((row) => Object.values(row))).toEqual(rows.map((row) => [...row]));
+
+      db.prepare(`INSERT INTO "MemoryVersion" ("id", "memoryId", "operation", "actor") VALUES ('v-5', 'm-jane', 'merge', 'user')`).run();
+      expect(() =>
+        db.prepare(`INSERT INTO "MemoryVersion" ("id", "memoryId", "operation", "actor") VALUES ('v-6', 'm-jane', 'squash', 'user')`).run(),
+      ).toThrow(/CHECK constraint failed/);
+
+      const index = db
+        .prepare(`SELECT "name" FROM sqlite_master WHERE "type" = 'index' AND "tbl_name" = 'MemoryVersion' AND "name" = 'MemoryVersion_memoryId_at_idx'`)
+        .all();
+      expect(index).toHaveLength(1);
+      expect(db.prepare(`SELECT COUNT(*) AS "n" FROM sqlite_master WHERE "name" = 'new_MemoryVersion'`).get()).toEqual({ n: 0 });
+    } finally {
+      db.close();
+    }
+  });
 });
