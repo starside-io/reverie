@@ -1,0 +1,40 @@
+{
+  "_comment": "Rename to hooks.json at M4, with the plugin bootstrap script it calls. None of these hooks calls a model or runs a search. SessionStart adds the capped core block and says what is waiting. PreCompact reminds the model to save session notes. SessionEnd marks the session as ready for extraction.",
+  "description": "Builds a fresh plugin install in the background, adds the core block for this project at session start, and marks a finished session as ready for extraction. Silent otherwise.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/plugin-bootstrap.mjs\" hook session-start 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/plugin-bootstrap.mjs\" hook pre-compact 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/plugin-bootstrap.mjs\" hook session-end 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

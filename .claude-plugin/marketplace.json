@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "reverie",
+  "description": "Reverie: a local-first memory library for one person and the assistants that work for them.",
+  "owner": {
+    "name": "Burlet Médéric"
+  },
+  "plugins": [
+    {
+      "name": "reverie",
+      "description": "Remember, recall and browse memories on shelves, in time order, cross-referenced by tag and linked to Fellowship.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

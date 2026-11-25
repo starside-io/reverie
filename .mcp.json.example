@@ -1,0 +1,12 @@
+{
+  "_comment": "Rename to .mcp.json at M3, in the same commit that makes the stdio MCP server runnable. A plugin that declares a server which cannot start fails on every session start, so this stays an example until the server exists.",
+  "mcpServers": {
+    "reverie": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/plugin-bootstrap.mjs", "mcp"],
+      "env": {
+        "REVERIE_DB_PATH": "${REVERIE_DB_PATH:-}"
+      }
+    }
+  }
+}

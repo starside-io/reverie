@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reverie module config",
+  "description": "The values the host stores and hands over through the settings port. Every figure here is a starting value to tune against the eval corpus. Once packages/core/src/config exists it owns the shapes and the defaults, and this file mirrors it.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "halfLifeDays": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Half life of a memory's recency weight, by kind, counted from lastConfirmedAt. A procedure does not decay and has no entry. Nothing caches this, so a change applies on the next recall.",
+      "properties": {
+        "fact": { "type": "number", "default": 365, "minimum": 7, "maximum": 3650 },
+        "preference": { "type": "number", "default": 730, "minimum": 7, "maximum": 3650 },
+        "episode": { "type": "number", "default": 90, "minimum": 7, "maximum": 3650 },
+        "reference": { "type": "number", "default": 365, "minimum": 7, "maximum": 3650 }
+      }
+    },
+    "recall": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What recall hands back. Below the floor nothing is returned and the result says sufficient: false.",
+      "properties": {
+        "floor": { "type": "number", "default": 0.35, "minimum": 0, "maximum": 1 },
+        "maxItems": { "type": "integer", "default": 8, "minimum": 1, "maximum": 50 },
+        "tokenBudget": { "type": "integer", "default": 1200, "minimum": 100, "maximum": 20000 }
+      }
+    },
+    "coreTokenCap": {
+      "type": "integer",
+      "default": 800,
+      "minimum": 100,
+      "maximum": 8000,
+      "description": "Ceiling on the always-on core block. Pinning past it is refused until something is unpinned."
+    },
+    "defaultShelf": {
+      "type": "string",
+      "default": "DSK/RET",
+      "pattern": "^[A-Z]{3}/[A-Z]{3,4}$",
+      "description": "Where a memory lands when no shelf is given: section code, a slash, shelf code. The seeded default is the Returns shelf at the front desk."
+    },
+    "sessionNoteTtlHours": {
+      "type": "integer",
+      "default": 72,
+      "minimum": 1,
+      "maximum": 720,
+      "description": "How long a session note lives before it expires unextracted."
+    },
+    "staleAfterDays": {
+      "type": "integer",
+      "default": 180,
+      "minimum": 7,
+      "maximum": 3650,
+      "description": "Days since lastConfirmedAt after which a memory is listed as stale. Listing only: nothing is retired automatically."
+    },
+    "autoAccept": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Whether a drafted memory may be accepted without review after waiting unchallenged. Off by default. A procedure and a sensitive category never auto-accept, whatever this says.",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "kinds": {
+          "type": "array",
+          "default": ["fact", "episode"],
+          "items": { "enum": ["fact", "episode", "reference", "preference"] }
+        },
+        "afterDays": { "type": "integer", "default": 7, "minimum": 1, "maximum": 90 }
+      }
+    },
+    "embedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The embedding model, when one is configured. Embedding rows are a cache of body and model, so a change re-embeds every memory before the new value counts as applied, and recall runs on full text search alone until that finishes.",
+      "properties": {
+        "model": { "type": ["string", "null"], "default": null },
+        "dim": { "type": ["integer", "null"], "default": null }
+      }
+    },
+    "consolidateEvery": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "When the host reports a consolidation as due. The host only says so: a model drafts it and a person confirms it.",
+      "properties": {
+        "sessions": { "type": "integer", "default": 10, "minimum": 1 },
+        "days": { "type": "integer", "default": 7, "minimum": 1 }
+      }
+    },
+    "incognito": {
+      "type": "boolean",
+      "default": false,
+      "description": "While true every read returns empty and every write is refused. The audit log records only that it was on."
+    }
+  }
+}

@@ -1,0 +1,40 @@
+node_modules/
+dist/
+
+# The Prisma client is generated from src/storage/schema.prisma.
+packages/*/generated/
+.next/
+*.tsbuildinfo
+
+# The database and its WAL sidecars. Real personal data, never committed.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Snapshots exported from the app hold the same data.
+*.snapshot.json
+backups/
+
+# Real transcripts and exports handed over for extraction.
+inputs/
+
+# Model weights.
+adapters/**/*.safetensors
+adapters/**/*.gguf
+adapters/**/*.bin
+
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# A plugin install building itself: see scripts/plugin-bootstrap.mjs.
+.plugin-build.lock/
+.plugin-build.log
+
+# The npm package as assembled by scripts/pack-npm.mjs.
+.npm-package/
+
+# The markdown mirror is a copy of the silo. Real personal data.
+mirror/

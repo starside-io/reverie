@@ -1,0 +1,133 @@
+{
+  "id": "memory",
+  "namespacedId": "reverie.memory",
+  "name": "Reverie",
+  "version": "0.0.1",
+  "description": "A local-first memory library: what one person wants kept, shelved in sections, ordered in time by call number, cross-referenced by tag, and linked to the people module when people are involved.",
+  "schemaVersion": 1,
+  "permissions": {
+    "network": "none",
+    "files": "none",
+    "connectors": [
+      "transcripts",
+      "markdown"
+    ]
+  },
+  "ports": {
+    "required": [
+      "storage",
+      "review",
+      "bus",
+      "audit",
+      "settings",
+      "refs"
+    ],
+    "optional": [
+      "models",
+      "connectors",
+      "privacy"
+    ]
+  },
+  "optionalModules": {
+    "people": "^0.1"
+  },
+  "silo": {
+    "tables": [
+      "Section",
+      "Shelf",
+      "Project",
+      "Memory",
+      "CallNumberAlias",
+      "Tag",
+      "MemoryTag",
+      "MemoryRef",
+      "MemoryVersion",
+      "Source",
+      "MemorySource",
+      "MemoryLink",
+      "Embedding",
+      "SessionNote",
+      "RecallLog"
+    ],
+    "search": [
+      "memory_fts"
+    ]
+  },
+  "tools": {
+    "read": [
+      "memory.recall",
+      "memory.browse",
+      "memory.get",
+      "memory.search",
+      "memory.related",
+      "memory.about",
+      "memory.shelves",
+      "memory.tags",
+      "memory.projects",
+      "memory.core",
+      "memory.history",
+      "memory.explain",
+      "memory.sources",
+      "memory.stale",
+      "memory.conflicts",
+      "memory.stats",
+      "memory.export",
+      "memory.review",
+      "memory.fs_view",
+      "memory.draft_context"
+    ],
+    "write": [
+      "memory.remember",
+      "memory.update",
+      "memory.supersede",
+      "memory.touch",
+      "memory.pin",
+      "memory.retire",
+      "memory.shelve",
+      "memory.set_tags",
+      "memory.set_shelves",
+      "memory.set_projects",
+      "memory.link",
+      "memory.link_occasion",
+      "memory.add_source",
+      "memory.session_note",
+      "memory.propose_draft"
+    ],
+    "needsOk": [
+      "memory.forget",
+      "memory.redact",
+      "memory.promote_procedure",
+      "memory.merge",
+      "memory.import",
+      "memory.decide"
+    ]
+  },
+  "drafting": {
+    "jobs": [
+      "extract",
+      "reconcile",
+      "consolidate",
+      "core"
+    ]
+  },
+  "events": {
+    "emits": [
+      "memory.memory.written",
+      "memory.memory.superseded",
+      "memory.memory.forgotten",
+      "memory.memory.shelved",
+      "memory.consolidation.proposed"
+    ],
+    "listens": [
+      "people.person.created",
+      "people.interaction.logged",
+      "people.interaction.changed",
+      "host.session.ended"
+    ]
+  },
+  "config": "./config.schema.json",
+  "adapters": {
+    "lora": "./adapters/memory-lora",
+    "grammars": "./adapters/grammars"
+  }
+}

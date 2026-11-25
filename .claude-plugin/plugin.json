@@ -1,0 +1,19 @@
+{
+  "name": "reverie",
+  "description": "Local-first memory library. Remember, recall and browse what matters across sessions: memories sit on shelves with a call number that places them in time, cross-reference by tag, and link to Fellowship when people are involved. One SQLite file, no network, every drafted memory lands in review.",
+  "version": "0.0.1",
+  "author": {
+    "name": "Burlet Médéric"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "memory",
+    "recall",
+    "notes",
+    "local-first",
+    "sqlite",
+    "personal",
+    "mcp"
+  ],
+  "homepage": "https://starside.io"
+}
