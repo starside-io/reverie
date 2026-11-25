@@ -1,0 +1,48 @@
+{
+  "name": "@reverie/core",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The memory module: schemas, tools, domain logic and the silo schema. Knows nothing about a host beyond its ports.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "default": "./dist/schemas/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "default": "./dist/storage/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-sql.mjs",
+    "db:check": "tsx scripts/db.ts check",
+    "db:generate": "tsx scripts/db.ts generate",
+    "db:migrate": "tsx scripts/db.ts migrate",
+    "db:new": "tsx scripts/db.ts new",
+    "db:path": "tsx scripts/db.ts path",
+    "postinstall": "prisma generate",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "prisma": "6.19.3",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  },
+  "files": [
+    "dist",
+    "generated"
+  ]
+}

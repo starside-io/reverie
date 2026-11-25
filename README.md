@@ -11,10 +11,11 @@ One user. No auth. No network. One SQLite file on your machine.
 Sibling to [Fellowship](https://github.com/starside-io/fellowship). Fellowship
 holds the people; Reverie holds what you keep of them and of everything else.
 
-**Status: scaffolding.** The design is finished and the app is not written.
-The build spec is [`docs/SPEC.md`](docs/SPEC.md), milestones M0 to M9. The
-commands and the skill in this repo describe what they will do and say so
-plainly rather than pretending.
+**Status: M0.** The workspace and the silo exist: schema, pragmas, migrations
+and FTS5, in `packages/core`. Nothing above storage is written yet. The build
+spec is [`docs/SPEC.md`](docs/SPEC.md), milestones M0 to M9. The commands and
+the skill in this repo describe what they will do and say so plainly rather
+than pretending.
 
 ## What it does, once built
 
@@ -120,7 +121,9 @@ docs/SPEC.md           the build spec, M0 to M9
 .mcp.json.example      the bundled MCP server, from M3
 ```
 
-Everything under `packages/` and `apps/` in the spec is not written yet.
+`packages/core` holds the storage layer only (`pnpm install`, `pnpm test`,
+`pnpm db:check`). The rest of `packages/` and `apps/` in the spec is not
+written yet.
 
 ## Two manifests, on purpose
 

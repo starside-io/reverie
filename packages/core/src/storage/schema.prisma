@@ -1,0 +1,290 @@
+// The silo. One SQLite file, one writer, owned by the host that opens it.
+//
+// Conventions, docs/SPEC.md section 11:
+//   - enums are String columns, validated by src/schemas/enums.ts and
+//     constrained by a CHECK per column in the migration
+//   - no scalar lists: arrays are Json columns with no database default
+//   - date-only values are DateTime, normalized to midnight UTC in core
+//   - memory_fts is raw SQL in fts.sql, kept in step by triggers
+//   - local folder paths are the host's (host.db), never the silo's
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  /// Built by the host from REVERIE_DB_PATH. Starting value.
+  url      = env("REVERIE_DATABASE_URL")
+}
+
+/// The project registry. A project is defined in setup, never discovered.
+model Project {
+  id          String   @id @default(uuid())
+  /// Short stable id, "nightstash".
+  slug        String   @unique
+  name        String
+  /// Normalised to github.com/owner/name. Optional. The portable identity.
+  repoUrl     String?  @unique
+  /// The project's shelf. Restrict: core repoints it before a shelf goes.
+  shelfId     String?
+  /// The project's tag. Restrict: a tag merge repoints it before the old row goes.
+  tagId       String?
+  /// One line, written for whoever shelves into it.
+  description String?
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shelf Shelf? @relation(fields: [shelfId], references: [id], onDelete: Restrict)
+  tag   Tag?   @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@index([shelfId])
+  @@index([tagId])
+}
+
+model Section {
+  id    String @id @default(uuid())
+  /// Three uppercase letters. Stable under rename.
+  code  String @unique
+  name  String
+  order Int
+
+  shelves Shelf[]
+}
+
+model Shelf {
+  id          String @id @default(uuid())
+  sectionId   String
+  /// Three uppercase letters, unique within the section. Stable under rename.
+  code        String
+  name        String
+  /// Written for the drafter: it decides where a new memory goes.
+  description String
+  order       Int
+
+  /// Restrict: a section with shelves is merged or emptied, never deleted.
+  section  Section   @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  memories Memory[]
+  projects Project[]
+
+  @@unique([sectionId, code])
+}
+
+model Memory {
+  id              String    @id @default(uuid())
+  /// "LIF/GTH/2026-12-24/001". Stored, not computed: the sort key and the handle.
+  callNumber      String    @unique
+  shelfId         String
+  /// Date only, midnight UTC. When it happened, not when it was written.
+  occurredOn      DateTime
+  /// Order within shelf and day, 1 to 999. Rendered three digits, zero padded.
+  seq             Int
+  /// MemoryKind: fact | preference | procedure | episode | reference
+  kind            String
+  /// MemoryScope: global | project | agent | session.
+  scope           String    @default("global")
+  /// Project slug, agent name or session id, by scope. Never a folder path.
+  scopeRef        String?
+  title           String
+  body            String
+  why             String?
+  howToApply      String?
+  /// 1 to 5. Starting value: the recall factor 0.6 + 0.1 * importance runs 0.7 to 1.1.
+  importance      Int       @default(3)
+  /// TrustTier: stated | confirmed | inferred | external
+  trust           String
+  /// MemoryState: active | superseded | retired. Proposed lives in the review
+  /// queue; forgotten has no row.
+  state           String    @default("active")
+  validFrom       DateTime
+  validTo         DateTime?
+  supersededById  String?
+  pinned          Boolean   @default(false)
+  lastConfirmedAt DateTime
+  lastRecalledAt  DateTime?
+  recallCount     Int       @default(0)
+  /// Tag slugs, space separated, filled by core for memory_fts. Starting value.
+  tagText         String    @default("")
+  /// When it was written. Kept apart from occurredOn on purpose.
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  /// Restrict: a shelf with entries is merged or emptied, never deleted.
+  shelf        Shelf             @relation(fields: [shelfId], references: [id], onDelete: Restrict)
+  supersededBy Memory?           @relation("Supersedes", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes   Memory[]          @relation("Supersedes")
+  aliases      CallNumberAlias[]
+  tags         MemoryTag[]
+  refs         MemoryRef[]
+  sources      MemorySource[]
+  linksFrom    MemoryLink[]      @relation("LinkFrom")
+  linksTo      MemoryLink[]      @relation("LinkTo")
+  embedding    Embedding?
+
+  @@unique([shelfId, occurredOn, seq])
+  @@index([occurredOn])
+  @@index([state])
+  @@index([kind])
+  @@index([scope, scopeRef])
+}
+
+model CallNumberAlias {
+  /// A number that once named a memory. Never reissued.
+  oldCallNumber String   @id
+  /// Null for a forgotten memory: the number points at nothing.
+  memoryId      String?
+  createdAt     DateTime @default(now())
+
+  memory Memory? @relation(fields: [memoryId], references: [id], onDelete: SetNull)
+
+  @@index([memoryId])
+}
+
+model Tag {
+  id     String @id @default(uuid())
+  /// Lowercase slug, no leading #.
+  slug   String @unique
+  colour String
+
+  memories MemoryTag[]
+  projects Project[]
+}
+
+model MemoryTag {
+  memoryId String
+  tagId    String
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([memoryId, tagId])
+  @@index([tagId])
+}
+
+model MemoryRef {
+  id       String  @id @default(uuid())
+  memoryId String
+  /// RefRole: attendee | occasion | mentions
+  role     String
+  /// module://people/person/<id> or module://people/event/<id>. Null while
+  /// unresolved. Never a foreign key: the other side is another module.
+  uri      String?
+  /// The name as told, or the label the refs port returned.
+  label    String
+  resolved Boolean @default(false)
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+
+  @@index([memoryId])
+  @@index([uri])
+}
+
+model MemoryVersion {
+  id            String   @id @default(uuid())
+  /// No relation on purpose: versions outlive a forgotten memory, redacted.
+  memoryId      String
+  /// VersionOperation: create | update | refine | supersede | shelve | retire |
+  /// redact | forget. Starting value.
+  operation     String
+  /// Who made the change: "user", "proposal:<id>", "import". Starting value.
+  actor         String
+  /// Null once redacted. Starting value: a hash of content is content.
+  contentSha256 String?
+  /// The content of this version, as JSON text of the user-visible fields.
+  /// Null once redacted. Starting value.
+  body          String?
+  at            DateTime @default(now())
+
+  @@index([memoryId, at])
+}
+
+model Source {
+  id         String    @id @default(uuid())
+  /// SourceKind: conversation | file | page | tool_result | import. Starting value.
+  kind       String
+  uri        String?
+  /// "session of 2026-12-27". Never the transcript itself.
+  label      String
+  occurredAt DateTime?
+  /// TrustTier, as on Memory.
+  trust      String
+  createdAt  DateTime  @default(now())
+
+  memories MemorySource[]
+}
+
+model MemorySource {
+  memoryId String
+  sourceId String
+  /// At most 500 characters, CHECK in the migration. Must appear in the
+  /// material the draft was made from.
+  quote    String
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@id([memoryId, sourceId])
+  @@index([sourceId])
+}
+
+model MemoryLink {
+  id        String   @id @default(uuid())
+  fromId    String
+  toId      String
+  /// LinkRelation: elaborates | contradicts | derived-from
+  relation  String
+  createdAt DateTime @default(now())
+
+  /// Cascade from both ends: a link to a forgotten memory goes with it.
+  from Memory @relation("LinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Memory @relation("LinkTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, relation])
+  @@index([toId])
+  @@index([relation])
+}
+
+/// A cache of body and model. Recomputed on a body change or a model change.
+model Embedding {
+  memoryId  String   @id
+  model     String
+  dim       Int
+  /// Little-endian float32, dim values.
+  vector    Bytes
+  createdAt DateTime @default(now())
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+}
+
+/// Scratch for one working session. Input to extraction, never recalled
+/// outside it. No relation to Memory on purpose.
+model SessionNote {
+  id        String   @id @default(uuid())
+  sessionId String
+  body      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([expiresAt])
+}
+
+/// One row per recall. Ids and numbers only, never the query text.
+model RecallLog {
+  id        String   @id @default(uuid())
+  at        DateTime @default(now())
+  /// MemoryScope the recall ran in.
+  scope     String
+  /// Project slug, agent name or session id, as on Memory. Starting value.
+  scopeRef  String?
+  /// JSON array of Memory ids, in returned order. Written by core, no default.
+  memoryIds Json
+  /// JSON array of scores, parallel to memoryIds. Written by core, no default.
+  scores    Json
+  /// The token budget the recall packed against.
+  budget    Int
+
+  @@index([at])
+}
