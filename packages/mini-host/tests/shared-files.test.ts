@@ -100,7 +100,9 @@ describe("the transcripts connector on the mini-host", () => {
 
       await coreTools.shared.clearReadyForExtraction(host.ports, "session-jane");
       expect(await code("session-jane")).toBe("no_pointer");
-      await expect(connectors!.pull("markdown", null)).rejects.toMatchObject({ code: "unknown_connector" });
+      await expect(connectors!.pull("calendar", null)).rejects.toMatchObject({ code: "unknown_connector" });
+      await expect(connectors!.push!("calendar", {})).rejects.toMatchObject({ code: "unknown_connector" });
+      await expect(connectors!.pull("markdown", null)).rejects.toMatchObject({ code: "bad_cursor" });
     } finally {
       await host.close();
     }

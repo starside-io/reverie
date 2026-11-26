@@ -34,6 +34,15 @@ export interface HostPorts {
 /** The silo, and nothing else. One writer, pragmas already asserted. */
 export interface StoragePort {
   silo(): Silo;
+  /**
+   * A consistent copy of the silo taken before an import writes anything
+   * (docs/SPEC.md section 25: `VACUUM INTO`, before every import). The host
+   * decides where it goes, so no tool input names a path; it answers the
+   * copy's file name, never the folder it is in. Optional, so the shared
+   * shape stays Fellowship's: without it an import runs with no copy and
+   * says so in its result.
+   */
+  backup?(reason: "import"): Promise<{ file: string }>;
 }
 
 /**
@@ -160,6 +169,14 @@ export interface ConnectorPull {
 /** `transcripts` and `markdown`, as module.json declares them. */
 export interface ConnectorsPort {
   pull(connector: string, cursor?: string | null): Promise<ConnectorPull>;
+  /**
+   * Hands a connector something to write on the host's side: the markdown
+   * mirror's files. Core still touches no disk path itself; what lands where
+   * is the connector's to check. Optional, so the shared shape stays
+   * Fellowship's: without it a mirror cannot be written, and the export
+   * says so.
+   */
+  push?(connector: string, payload: unknown): Promise<unknown>;
 }
 
 /** Pass-through, as in Fellowship. Nothing here should look like protection that is not there. */

@@ -216,7 +216,7 @@ export async function commitRemember(
   );
 
   const embedding = await storeEmbedding(ctx, created.id, vector);
-  emitWritten(ctx, created, "create");
+  emitWritten(ctx, created, "create", {}, drafted?.door);
 
   const memory = await memoryView(ctx, created.id);
   const occasionUri = memory.occasion?.uri ?? null;

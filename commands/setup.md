@@ -33,11 +33,17 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
    { action: "propose" }`, then write it with `{ action: "create" }`: slug,
    name, `repoUrl`, the shelf and tag, and its local `folders`. `memory_projects`
    lists what is registered and which project this session resolves to.
-4. Offer to bring in an existing Reverie snapshot file. That is
-   `memory_import { from: "snapshot", snapshot }` in merge mode, with the
-   file's JSON as `snapshot`, and it needs a yes. A markdown folder or a
-   Claude Code memory directory cannot be imported yet: say so rather than
-   copying files in by hand.
+4. Offer to bring in what already exists, each one with a yes:
+   - a Reverie snapshot file: `memory_import { from: "snapshot", snapshot }`
+     in merge mode, with the file's JSON as `snapshot`.
+   - a markdown mirror folder: `memory_import { from: "markdown", folder }`,
+     the folder as an absolute path.
+   - this project's Claude Code memory directory, the folder with
+     `MEMORY.md` in it: `memory_import { from: "claude_code", folder,
+     project }`, with the project's slug from step 3 when the directory
+     belongs to one. It is imported once and never written to.
+   Run each with `dryRun: true` first and show the owner what it would
+   write, file by file. Never copy files in by hand.
 5. Say whether Fellowship is installed, because that decides whether people in
    a memory become references or stay as names.
 6. Explain the two settings that change how it feels: auto-accept (off by

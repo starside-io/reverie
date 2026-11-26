@@ -87,6 +87,7 @@ export async function startMiniHost(options: MiniHostOptions = {}): Promise<Mini
   const { ports, emitter, readConfig } = createPorts({
     silo,
     store,
+    siloPath,
     ...(options.models ? { models: options.models } : {}),
     ...(options.transcripts === false ? { transcripts: false } : {}),
   });

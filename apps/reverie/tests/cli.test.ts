@@ -229,6 +229,59 @@ describe("reverie export, verify and import", () => {
   });
 });
 
+describe("reverie export and import through a folder", () => {
+  it("writes a mirror folder and reads it into another silo, then reports an edit file by file", async () => {
+    const io = throwawayIo();
+    await seed(io);
+    expect(await run(["export", "mirror", "--mirror"], io)).toBe(0);
+    expect(io.stdout).toContain("2 memories in 3 files");
+    expect(existsSync(join(io.dir, "mirror", ".reverie", "library.json"))).toBe(true);
+    expect(readdirSync(join(io.dir, "mirror", "Life", "Home"))).toHaveLength(2);
+
+    // An existing folder is a mirror without the flag; writing it again changes nothing.
+    const again = throwawayIo(io.dir);
+    expect(await run(["export", "mirror"], again)).toBe(0);
+    expect(again.stdout).toMatch(/written\s+0/);
+
+    const other = throwawayIo();
+    const into = { ...other, cwd: io.dir };
+    expect(await run(["import", "mirror", "--dry-run"], into)).toBe(0);
+    expect(other.stdout).toContain("Nothing was written.");
+    expect(existsSync(join(other.dir, "backups"))).toBe(false);
+    expect(await run(["import", "mirror"], into)).toBe(0);
+    expect(other.stdout).toMatch(/memories\s+2/);
+    expect(other.stdout).toContain(`Backed up the silo to ${join(other.dir, "backups")}`);
+
+    const host = await startMiniHost({ env: other.env });
+    try {
+      expect(await host.silo.memory.count()).toBe(2);
+    } finally {
+      await host.close();
+    }
+  });
+
+  it("imports a Claude Code memory directory once, into a project, and never writes to it", async () => {
+    const { writeClaudeCodeFixture } = await import("../../../packages/adapter-markdown/tests/fixtures/claude-code.js");
+    const io = throwawayIo();
+    const dir = writeClaudeCodeFixture(join(io.dir, "claude-memory"));
+    const before = readdirSync(dir).map((name) => readFileSync(join(dir, name), "utf8"));
+    const host = await startMiniHost({ env: io.env });
+    try {
+      await host.api.invoke("memory.set_projects", { action: "create", slug: "harbour", name: "Harbour" });
+    } finally {
+      await host.close();
+    }
+
+    expect(await run(["import", "claude-memory", "--project", "harbour"], io)).toBe(0);
+    expect(io.stdout).toMatch(/memories\s+5/);
+    expect(io.stdout).toMatch(/links\s+1/);
+    const second = throwawayIo(io.dir);
+    expect(await run(["import", "claude-memory", "--claude-code", "--project", "harbour"], second)).toBe(0);
+    expect(second.stdout).toMatch(/memories\s+0/);
+    expect(readdirSync(dir).map((name) => readFileSync(join(dir, name), "utf8"))).toEqual(before);
+  });
+});
+
 describe("reverie reindex and dream", () => {
   it("rebuilds the search index and checks it", async () => {
     const io = throwawayIo();

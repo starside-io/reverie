@@ -165,10 +165,12 @@ describe("memory.import", () => {
     expect(await host.db.memory.count()).toBe(1);
   });
 
-  it("refuses markdown folders and Claude Code memory directories as not built yet", async () => {
+  it("refuses a markdown folder or a Claude Code directory on a host with no markdown connector, writing nothing", async () => {
     for (const from of ["markdown", "claude_code"]) {
-      await expect(run({ from, folder: "/tmp/nowhere" })).rejects.toMatchObject({ code: "not_implemented", detail: { from } });
+      await expect(run({ from, folder: "/tmp/nowhere" })).rejects.toMatchObject({ code: "unavailable" });
+      await expect(run({ from })).rejects.toMatchObject({ code: "invalid_input" });
     }
+    expect(await host.db.memory.count()).toBe(0);
   });
 
   it("refuses a file that is not a snapshot", async () => {

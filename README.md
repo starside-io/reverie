@@ -117,6 +117,19 @@ To list it in a marketplace file you already maintain, add this to its
 | `/reverie:open [shelf or call number]` | Start the host, or find the one running, and open the library UI |
 | `skills/reverie` | The procedure, including when to call Fellowship |
 
+## Bringing memories in and out
+
+| Surface | Does |
+| --- | --- |
+| `reverie export <file>` | The whole library as one snapshot file, for your own backup |
+| `reverie export <folder> --mirror` | The library as a markdown mirror: one folder per section, one per shelf, one file per memory named by call number (`Life/Gatherings/2026-12-24-001 christmas-at-home.md`), and `.reverie/library.json` beside them. Readable in Obsidian. Files the mirror did not write are never touched, and a forgotten memory is gone from it |
+| `reverie import <folder>` | A mirror folder back in. An edited file comes back as a new version, an unchanged one is left alone, a note you wrote by hand in the folder is remembered, and nothing is deleted. `--replace --yes` takes the library from the folder, after naming what it destroys |
+| `reverie import <folder> --claude-code [--project <slug>]` | A Claude Code memory directory, imported once and never written to. `user` memories land global; the rest are scoped to the project you name. Importing it again adds nothing |
+| `memory_export`, `memory_import` | The same, for an assistant: `to: "markdown"` and `folder`, or `from: "markdown"` / `from: "claude_code"` and `folder` |
+
+Every import takes a backup of the silo first, beside it in `backups/`.
+
+## Layout
 ## Layout
 
 ```
@@ -135,7 +148,9 @@ docs/SPEC.md           the build spec, M0 to M9
 stdio MCP server, and serves the built UI. `packages/ui` is the UI, a React
 app that talks to the host through `POST /rpc` and imports no database.
 `packages/connector-transcripts` reads a session transcript
-off disk as turns, behind the host's `connectors` port. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
+off disk as turns, behind the host's `connectors` port, and
+`packages/adapter-markdown` reads and writes the markdown mirror and reads a
+Claude Code memory directory, behind the same port. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
 `status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, and
 `hook` for the plugin hooks). Run
 `pnpm install`, `pnpm test`, `pnpm build`, `pnpm db:check`. The rest of

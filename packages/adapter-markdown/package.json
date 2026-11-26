@@ -1,0 +1,27 @@
+{
+  "name": "@reverie/adapter-markdown",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The markdown mirror on disk: writes the library as one folder per section, one per shelf, one file per memory, reads it back, and reads a Claude Code memory directory. Touches only files it wrote.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  },
+  "files": [
+    "dist"
+  ]
+}

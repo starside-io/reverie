@@ -19,6 +19,7 @@
   "dependencies": {
     "@hono/node-server": "2.1.11",
     "@modelcontextprotocol/sdk": "1.32.2",
+    "@reverie/adapter-markdown": "workspace:*",
     "@reverie/connector-transcripts": "workspace:*",
     "@reverie/core": "workspace:*",
     "hono": "4.13.21",

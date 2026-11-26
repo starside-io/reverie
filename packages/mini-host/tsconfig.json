@@ -6,7 +6,8 @@
     "paths": {
       "@reverie/core": ["../core/src/index.ts"],
       "@reverie/core/*": ["../core/src/*"],
-      "@reverie/connector-transcripts": ["../connector-transcripts/src/index.ts"]
+      "@reverie/connector-transcripts": ["../connector-transcripts/src/index.ts"],
+      "@reverie/adapter-markdown": ["../adapter-markdown/src/index.ts"]
     }
   },
   "include": ["src", "tests", "vitest.config.ts"]

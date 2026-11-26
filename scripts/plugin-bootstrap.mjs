@@ -29,12 +29,17 @@ const lockDir = join(root, ".plugin-build.lock");
 const logPath = join(root, ".plugin-build.log");
 
 /**
- * What a plugin session needs: the MCP server, the CLI for the hooks, and the
- * built UI that `reverie serve` hands out and /reverie:open opens. `pnpm
- * build` builds all three; a checkout built before the UI existed is built
- * again, once.
+ * What a plugin session needs: the MCP server, the CLI for the hooks, the
+ * markdown mirror the server loads, and the built UI that `reverie serve`
+ * hands out and /reverie:open opens. `pnpm build` builds them all; a
+ * checkout built before one of them existed is built again, once.
  */
-const OUTPUTS = ["packages/mini-host/dist/mcp.js", "apps/reverie/dist/cli.js", "packages/ui/dist/index.html"];
+const OUTPUTS = [
+  "packages/mini-host/dist/mcp.js",
+  "packages/adapter-markdown/dist/index.js",
+  "apps/reverie/dist/cli.js",
+  "packages/ui/dist/index.html",
+];
 
 /** A build that has not finished in this long is taken to have died. */
 const STALE_LOCK_MS = 15 * 60_000;

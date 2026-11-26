@@ -78,6 +78,12 @@ export interface ImportOptions {
   actor?: string;
   /** When. Defaults to now. Tests pin it. */
   at?: Date;
+  /**
+   * Memories whose replacement the file does not carry on purpose (a mirror
+   * folder read in part): a merge leaves their supersededById as the silo
+   * holds it instead of clearing it.
+   */
+  keepSupersededBy?: ReadonlySet<string>;
 }
 
 type IdMap = Map<string, string>;
@@ -517,7 +523,7 @@ async function contentHash(tx: Tx, memoryId: string): Promise<string> {
 async function mergeAll(
   tx: Tx,
   snapshot: ParsedSnapshot,
-  options: Required<ImportOptions>,
+  options: Required<Pick<ImportOptions, "actor" | "at">> & Pick<ImportOptions, "keepSupersededBy">,
 ): Promise<{ counts: ImportCounts; needsEmbedding: string[]; written: Written }> {
   const counts = emptyCounts();
   const needsEmbedding: string[] = [];
@@ -592,6 +598,7 @@ async function mergeAll(
   }
 
   for (const memory of live) {
+    if (options.keepSupersededBy?.has(memory.id)) continue;
     const supersededById =
       memory.supersededById !== null && skipped.has(memory.supersededById) ? null : memory.supersededById;
     const row = await tx.memory.findUniqueOrThrow({ where: { id: memory.id }, select: { supersededById: true } });
@@ -705,7 +712,11 @@ export async function importSnapshot(
       `Refusing to replace the library with a file that has no ${RETURNS.section}/${RETURNS.shelf} shelf: Returns always exists.`,
     );
   }
-  const resolved: Required<ImportOptions> = { actor: options.actor ?? "import", at: options.at ?? new Date() };
+  const resolved = {
+    actor: options.actor ?? "import",
+    at: options.at ?? new Date(),
+    ...(options.keepSupersededBy ? { keepSupersededBy: options.keepSupersededBy } : {}),
+  };
 
   return atomic(db, async (tx) => {
     if (parsedMode === "replace") {

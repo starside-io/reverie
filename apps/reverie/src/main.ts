@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, openSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,12 +53,25 @@ export const USAGE = `reverie <command>
   tools                    List the tool surface.
   verify <file> [--keep]   Import a snapshot into a throwaway silo, export it
                            back out, and diff the two. Touches no live file.
-  import <file>            Read a snapshot into the live silo. Merge: the file
-                           wins row by row and nothing else is touched. A
-                           backup of the silo is taken first.
+  import <file|folder>     Read a snapshot, a markdown mirror folder or a
+                           Claude Code memory directory into the live silo.
+                           Merge: nothing is deleted; an edited mirror file
+                           comes back as a new version, an unchanged one is
+                           left alone. A backup of the silo is taken first.
+        [--mirror]         The folder is a markdown mirror (the default for a
+                           folder, unless it holds MEMORY.md and no mirror).
+        [--claude-code]    The folder is a Claude Code memory directory:
+                           imported once, never written to.
+        [--project <slug>] For --claude-code: the registered project it
+                           belongs to. Without one, everything lands global.
+        [--dry-run]        Say what it would do, file by file. Writes nothing.
         [--replace --yes]  Delete the library first. Names what it will
                            destroy, and refuses without --yes.
-  export <file>            Write the whole library to a snapshot file.
+  export <file|folder>     Write the whole library to a snapshot file.
+        [--mirror]         Write it as a markdown mirror folder instead: one
+                           folder per section, one per shelf, one file per
+                           memory. Files the mirror did not write are never
+                           touched. The default when the path is a folder.
   reindex                  Rebuild the search index from the memory rows and
                            check it. For a file restored from a backup.
   dream                    Whether a consolidation pass is due and how many
@@ -151,24 +164,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     case "import":
       return importCommand(argv, io);
 
-    case "export": {
-      const file = argv[1];
-      if (!file) {
-        io.err("Usage: reverie export <snapshot.json>\n");
-        return 2;
-      }
-      return withHost(io, async (host) => {
-        const result = (await host.api.invoke("memory.export", {})) as {
-          snapshot: unknown;
-          memories: number;
-          versions: number;
-        };
-        const path = resolve(io.cwd, file);
-        writeFileSync(path, JSON.stringify(result.snapshot));
-        io.out(`Wrote ${path}: ${result.memories} memories, ${result.versions} versions, and everything attached.\n`);
-        return 0;
-      });
-    }
+    case "export":
+      return exportCommand(argv, io);
 
     case "reindex":
       return withHost(io, async (host) => {
@@ -304,30 +301,90 @@ async function status(io: Io): Promise<number> {
 interface DryRun {
   wouldDestroy: Record<string, number> | null;
   acknowledgement: string | null;
+  folder?: FolderReport;
+}
+
+interface FolderReport {
+  files: number;
+  memories: number;
+  unchanged: number;
+  applied: number;
+  conflicts: Array<{ path: string; message: string }>;
+  problems: Array<{ path: string; message: string }>;
+  forgotten: Array<{ path: string; message: string }>;
+  notes: Array<{ path: string; action: string; call?: string; message?: string }>;
+}
+
+function optionValue(argv: string[], name: string): string | undefined {
+  const index = argv.indexOf(name);
+  const value = index === -1 ? undefined : argv[index + 1];
+  return value && !value.startsWith("--") ? value : undefined;
+}
+
+function isFolder(path: string): boolean {
+  return existsSync(path) && statSync(path).isDirectory();
+}
+
+/** What a folder is, by flag, else by what it holds: a mirror has .reverie/library.json, a Claude Code directory MEMORY.md. */
+function folderKind(argv: string[], path: string): "markdown" | "claude_code" {
+  if (argv.includes("--claude-code")) return "claude_code";
+  if (argv.includes("--mirror")) return "markdown";
+  if (existsSync(join(path, ".reverie", "library.json"))) return "markdown";
+  return existsSync(join(path, "MEMORY.md")) ? "claude_code" : "markdown";
+}
+
+/** One line per file that needs the owner's eye, and a count of the rest. */
+function folderLines(report: FolderReport | undefined): string[] {
+  if (!report) return [];
+  const lines = [
+    `  files          ${report.files}`,
+    `  unchanged      ${report.unchanged}`,
+    `  taken in       ${report.applied}`,
+  ];
+  for (const entry of report.conflicts) lines.push(`  conflict   ${entry.path}: ${entry.message}`);
+  for (const entry of report.problems) lines.push(`  problem    ${entry.path}: ${entry.message}`);
+  for (const entry of report.forgotten) lines.push(`  forgotten  ${entry.path}: ${entry.message}`);
+  for (const note of report.notes) {
+    lines.push(`  ${note.action.padEnd(10)} ${note.path}${note.call ? ` as ${note.call}` : ""}${note.message ? `: ${note.message}` : ""}`);
+  }
+  return lines;
 }
 
 /**
- * Import through memory.import, with a backup of the silo first (docs/SPEC.md
- * section 25: before every import). A replace keeps the tool's handshake: the
- * dry run names what it destroys and hands back an acknowledgement, the owner
- * says yes with --yes, and the import runs with that acknowledgement.
+ * Import through memory.import: a snapshot file, a markdown mirror folder,
+ * or a Claude Code memory directory. The tool takes the backup of the silo
+ * before it writes anything (docs/SPEC.md section 25: before every import).
+ * A replace keeps the tool's handshake: the dry run names what it destroys
+ * and hands back an acknowledgement, the owner says yes with --yes, and the
+ * import runs with that acknowledgement.
  */
 async function importCommand(argv: string[], io: Io): Promise<number> {
-  const file = argv[1];
-  if (!file || file.startsWith("--")) {
-    io.err("Usage: reverie import <snapshot.json> [--replace --yes]\n");
+  const target = argv[1];
+  if (!target || target.startsWith("--")) {
+    io.err("Usage: reverie import <snapshot.json|folder> [--mirror|--claude-code [--project <slug>]] [--dry-run] [--replace --yes]\n");
     return 2;
   }
 
   const replace = argv.includes("--replace");
   const mode = replace ? "replace" : "merge";
-  const snapshot: unknown = JSON.parse(readFileSync(resolve(io.cwd, file), "utf8"));
+  const path = resolve(io.cwd, target);
+  const folder = isFolder(path);
+  const project = optionValue(argv, "--project");
+  const source: Record<string, unknown> = folder
+    ? { from: folderKind(argv, path), folder: path, ...(project ? { project } : {}) }
+    : { from: "snapshot", snapshot: JSON.parse(readFileSync(path, "utf8")) as unknown };
 
   return withHost(io, async (host) => {
+    if (argv.includes("--dry-run")) {
+      const plan = (await host.api.invoke("memory.import", { ...source, mode, dryRun: true, confirmedByUser: true })) as DryRun;
+      io.out([`Would ${mode} into ${host.siloPath}. Nothing was written.`, ...folderLines(plan.folder), ""].join("\n"));
+      return 0;
+    }
+
     let acknowledge: string | undefined;
     if (replace) {
       const dryRun = (await host.api.invoke("memory.import", {
-        snapshot,
+        ...source,
         mode,
         dryRun: true,
         confirmedByUser: true,
@@ -352,38 +409,81 @@ async function importCommand(argv: string[], io: Io): Promise<number> {
       acknowledge = dryRun.acknowledgement ?? undefined;
     }
 
-    // A consistent copy, with its search index checked, before anything is
-    // written. backupSilo refuses a path that exists, so the name carries the
-    // time to the millisecond.
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const backupPath = join(dirname(host.siloPath), "backups", `reverie-before-import-${stamp}.db`);
-    mkdirSync(dirname(backupPath), { recursive: true });
-    await storage.backupSilo(host.silo, backupPath);
-    io.out(`Backed up the silo to ${backupPath}\n`);
-
+    const backups = join(dirname(host.siloPath), "backups");
     try {
       const result = (await host.api.invoke("memory.import", {
-        snapshot,
+        ...source,
         mode,
         confirmedByUser: true,
         ...(acknowledge ? { acknowledge } : {}),
-      })) as { counts: Record<string, number>; needsEmbedding: number };
+      })) as { counts: Record<string, number>; needsEmbedding: number; backup: string | null; folder?: FolderReport; links?: number };
 
       io.out(
         [
+          result.backup ? `Backed up the silo to ${join(backups, result.backup)}` : "No backup was taken: this host offers none.",
           `${mode} into ${host.siloPath}`,
-          ...Object.entries(result.counts).map(([name, value]) => `  ${name.padEnd(14)} ${value}`),
+          ...(source["from"] === "claude_code"
+            ? [`  memories       ${result.counts["memories"] ?? 0}`, `  links          ${result.links ?? 0}`]
+            : Object.entries(result.counts).map(([name, value]) => `  ${name.padEnd(14)} ${value}`)),
+          ...folderLines(result.folder),
           "",
         ].join("\n"),
       );
       return 0;
     } catch (error) {
       if (error instanceof coreTools.ToolError) {
-        io.err(`${error.code}: ${error.message}\nThe backup is at ${backupPath}.\n`);
+        io.err(`${error.code}: ${error.message}\nAny backup taken before the import is in ${backups}.\n`);
         return 1;
       }
       throw error;
     }
+  });
+}
+
+/** A snapshot file, or a markdown mirror folder through memory.export. */
+async function exportCommand(argv: string[], io: Io): Promise<number> {
+  const target = argv[1];
+  if (!target || target.startsWith("--")) {
+    io.err("Usage: reverie export <snapshot.json|folder> [--mirror]\n");
+    return 2;
+  }
+  const path = resolve(io.cwd, target);
+  const mirror = argv.includes("--mirror") || isFolder(path);
+  return withHost(io, async (host) => {
+    if (mirror) {
+      try {
+        const result = (await host.api.invoke("memory.export", { to: "markdown", folder: path })) as {
+          memories: number;
+          files: number;
+          mirror: { written: number; unchanged: number; removed: number; kept: Array<{ path: string; reason: string }> };
+        };
+        io.out(
+          [
+            `Wrote the mirror to ${path}: ${result.memories} memories in ${result.files} files.`,
+            `  written        ${result.mirror.written}`,
+            `  unchanged      ${result.mirror.unchanged}`,
+            `  removed        ${result.mirror.removed}`,
+            ...result.mirror.kept.map((entry) => `  kept       ${entry.path}: ${entry.reason}`),
+            "",
+          ].join("\n"),
+        );
+        return 0;
+      } catch (error) {
+        if (error instanceof coreTools.ToolError) {
+          io.err(`${error.code}: ${error.message}\n`);
+          return 1;
+        }
+        throw error;
+      }
+    }
+    const result = (await host.api.invoke("memory.export", {})) as {
+      snapshot: unknown;
+      memories: number;
+      versions: number;
+    };
+    writeFileSync(path, JSON.stringify(result.snapshot));
+    io.out(`Wrote ${path}: ${result.memories} memories, ${result.versions} versions, and everything attached.\n`);
+    return 0;
   });
 }
 

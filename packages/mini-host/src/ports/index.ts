@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
+import { mkdirSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+
+import { createMarkdownConnector } from "@reverie/adapter-markdown";
 import { createTranscriptsConnector } from "@reverie/connector-transcripts";
-import { config as coreConfig, domain, tools as coreTools } from "@reverie/core";
+import { config as coreConfig, domain, storage, tools as coreTools } from "@reverie/core";
 import type {
   AuditPort,
   BusPort,
@@ -46,6 +50,18 @@ export interface PortsOptions {
    * session hands over its notes alone and says so.
    */
   transcripts?: boolean;
+  /**
+   * The silo's own path. With it, the storage port takes the backup every
+   * import asks for (docs/SPEC.md section 25), into a backups folder beside
+   * the silo. Without it, imports run with no backup and say so.
+   */
+  siloPath?: string;
+}
+
+/** Where the backup before an import goes: beside the silo, named by the time to the millisecond. */
+export function importBackupPath(siloPath: string, now: Date = new Date()): string {
+  const stamp = now.toISOString().replace(/[:.]/g, "-");
+  return join(dirname(siloPath), "backups", `reverie-before-import-${stamp}.db`);
 }
 
 export interface MiniHostPorts {
@@ -98,7 +114,22 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     return coreConfig.DEFAULT_CONFIG;
   }
 
-  const storagePort: StoragePort = { silo: () => silo };
+  const siloPath = options.siloPath;
+  const storagePort: StoragePort = {
+    silo: () => silo,
+    ...(siloPath
+      ? {
+          backup: async () => {
+            // VACUUM INTO, then the copy's search index checked. backupSilo
+            // refuses a path that exists, so the name carries the millisecond.
+            const path = importBackupPath(siloPath);
+            mkdirSync(dirname(path), { recursive: true });
+            await storage.backupSilo(silo, path);
+            return { file: basename(path) };
+          },
+        }
+      : {}),
+  };
 
   const values: SettingsValuesPort = {
     get: async (key) => store.readValue(key),
@@ -197,7 +228,7 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
   // The transcripts connector reads one file: the pointer the SessionEnd
   // hook stored for a session that is still waiting for extraction. The
   // session id comes from core; the path never does, so no tool input can
-  // name a file to read. The markdown connector is not built yet (M7).
+  // name a file to read.
   const transcripts = createTranscriptsConnector({
     pointerFor: (session) => {
       const ready = store.readValue(coreTools.shared.READY_FOR_EXTRACTION_KEY);
@@ -207,10 +238,21 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
       return typeof pointer === "string" ? pointer : null;
     },
   });
+  // The markdown connector reads and writes the folder a tool call names:
+  // a mirror folder, or a Claude Code memory directory it only ever reads.
+  // It refuses anything that would leave that folder or follow a symlink.
+  const markdown = createMarkdownConnector();
+  const unknown = (name: string) =>
+    Object.assign(new Error(`This host has no ${name} connector.`), { code: "unknown_connector" });
   const connectors: ConnectorsPort = {
     pull: async (name, cursor) => {
       if (name === transcripts.name) return transcripts.pull(cursor);
-      throw Object.assign(new Error(`This host has no ${name} connector.`), { code: "unknown_connector" });
+      if (name === markdown.name) return markdown.pull(cursor);
+      throw unknown(name);
+    },
+    push: async (name, payload) => {
+      if (name === markdown.name) return markdown.push(payload);
+      throw unknown(name);
     },
   };
 

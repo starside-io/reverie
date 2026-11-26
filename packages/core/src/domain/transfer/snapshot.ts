@@ -228,14 +228,14 @@ const slugSchema = z
   .max(TAG_SLUG_MAX_LENGTH)
   .regex(TAG_SLUG_PATTERN, "Expected a lowercase tag slug");
 
-const sectionSchema = z.object({
+export const snapshotSectionSchema = z.object({
   id: idSchema,
   code: codeSchema,
   name: z.string().min(1).max(80),
   order: z.number().int(),
 });
 
-const shelfSchema = z.object({
+export const snapshotShelfSchema = z.object({
   id: idSchema,
   sectionId: idSchema,
   code: codeSchema,
@@ -249,7 +249,7 @@ const shelfSchema = z.object({
  * carries a folder path on a project (a hand edit, another tool's export)
  * never writes it anywhere.
  */
-const projectSchema = z.object({
+export const snapshotProjectSchema = z.object({
   id: idSchema,
   slug: slugSchema,
   name: z.string().min(1).max(120),
@@ -262,13 +262,13 @@ const projectSchema = z.object({
   updatedAt: dateTimeSchema,
 });
 
-const tagSchema = z.object({
+export const snapshotTagSchema = z.object({
   id: idSchema,
   slug: slugSchema,
   colour: hexColourSchema,
 });
 
-const sourceSchema = z.object({
+export const snapshotSourceSchema = z.object({
   id: idSchema,
   kind: SourceKind,
   uri: nullableText(2000),
@@ -278,7 +278,7 @@ const sourceSchema = z.object({
   createdAt: dateTimeSchema,
 });
 
-const refSchema = z.object({
+export const snapshotRefSchema = z.object({
   id: idSchema,
   role: RefRole,
   uri: nullableText(2000),
@@ -286,12 +286,12 @@ const refSchema = z.object({
   resolved: z.boolean().default(false),
 });
 
-const citationSchema = z.object({
+export const snapshotCitationSchema = z.object({
   sourceId: idSchema,
   quote: z.string().min(1).max(QUOTE_MAX_LENGTH, `A quote holds at most ${QUOTE_MAX_LENGTH} characters`),
 });
 
-const memorySchema = z.object({
+export const snapshotMemorySchema = z.object({
   id: idSchema,
   callNumber: z.string().regex(CALL_NUMBER_PATTERN, "Expected a call number such as LIF/GTH/2026-12-24/001"),
   shelfId: idSchema,
@@ -317,11 +317,11 @@ const memorySchema = z.object({
   createdAt: dateTimeSchema,
   updatedAt: dateTimeSchema,
   tagIds: z.array(idSchema).default([]),
-  refs: z.array(refSchema).default([]),
-  sources: z.array(citationSchema).min(1, "No source, no memory: every memory cites at least one source"),
+  refs: z.array(snapshotRefSchema).default([]),
+  sources: z.array(snapshotCitationSchema).min(1, "No source, no memory: every memory cites at least one source"),
 });
 
-const versionSchema = z.object({
+export const snapshotVersionSchema = z.object({
   id: idSchema,
   memoryId: idSchema,
   operation: VersionOperation,
@@ -338,13 +338,13 @@ const versionSchema = z.object({
   at: dateTimeSchema,
 });
 
-const aliasSchema = z.object({
+export const snapshotAliasSchema = z.object({
   oldCallNumber: z.string().regex(CALL_NUMBER_PATTERN, "Expected a call number"),
   memoryId: idSchema.nullish().transform((value) => value ?? null),
   createdAt: dateTimeSchema,
 });
 
-const linkSchema = z.object({
+export const snapshotLinkSchema = z.object({
   id: idSchema,
   fromId: idSchema,
   toId: idSchema,
@@ -369,15 +369,15 @@ export const snapshotSchema = z
   .object({
     version: z.literal(1),
     exportedAt: z.string().optional(),
-    sections: z.array(sectionSchema).default([]),
-    shelves: z.array(shelfSchema).default([]),
-    projects: z.array(projectSchema).default([]),
-    tags: z.array(tagSchema).default([]),
-    sources: z.array(sourceSchema).default([]),
-    memories: z.array(memorySchema).default([]),
-    versions: z.array(versionSchema).default([]),
-    aliases: z.array(aliasSchema).default([]),
-    links: z.array(linkSchema).default([]),
+    sections: z.array(snapshotSectionSchema).default([]),
+    shelves: z.array(snapshotShelfSchema).default([]),
+    projects: z.array(snapshotProjectSchema).default([]),
+    tags: z.array(snapshotTagSchema).default([]),
+    sources: z.array(snapshotSourceSchema).default([]),
+    memories: z.array(snapshotMemorySchema).default([]),
+    versions: z.array(snapshotVersionSchema).default([]),
+    aliases: z.array(snapshotAliasSchema).default([]),
+    links: z.array(snapshotLinkSchema).default([]),
   })
   .superRefine((value, ctx) => {
     const issues: Issue[] = [
