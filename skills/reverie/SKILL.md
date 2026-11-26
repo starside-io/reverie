@@ -115,61 +115,130 @@ Fellowship. Each holds a reference to the other and neither copies it.
 | --- | --- |
 | What happened | Reverie |
 | Who was there | Fellowship. Reverie carries the same list as references. |
-| How it went between people | Fellowship. Reverie never stores a score or a sentiment. |
+| How it went between people | Fellowship. Reverie never stores a score or a sentiment, and refuses one. |
 | A fact about one guest | Fellowship, as a note on that person |
+
+The URIs that cross: `module://people/person/<personId>`,
+`module://people/event/<eventId>`, and `module://memory/memory/<call number>`
+for the way back.
 
 ### Which of the two is here
 
 Look at the tools in the session. Do not ping a port and do not guess.
 
-| Tools listed | Do |
+| Present | The owner tells a story with people in it |
 | --- | --- |
-| `memory_*` and `people_*` | Both: an occasion in Fellowship and an episode here, linked |
-| `memory_*` only | An episode here, attendees kept as names |
-| `people_*` only | An occasion in Fellowship, the short story in its description |
+| `memory_*` and `people_*` | An occasion in Fellowship and an episode here, each referencing the other |
+| `memory_*` only | An episode here. Attendees kept as names, marked unresolved |
+| `people_*` only | An occasion in Fellowship, with the short story in its description |
 
-Reverie and Fellowship never call each other. You are the bridge: you make one
-call to each and carry the id across.
+Reverie and Fellowship never call each other, and no bus runs between them
+when each has its own host. You are the bridge: you make one call to each,
+carry the id across, and tell each side what the other just did.
 
-- **The owner told the story:** show the whole bundle, take one yes, then
-  `people_log_interaction`, read back the occasion id, then `memory_remember`
-  with that id. No review queue is involved.
-- **You inferred it** (from a transcript or a file): propose the episode to
-  Reverie only, with the occasion as its pending payload. When the owner
-  confirms, `memory_decide` returns a `followUp`. Run it, then
-  `memory_link_occasion`. If Fellowship is not there, leave it: the memory is
-  complete without it.
+### The owner told it (both present)
 
-### Writing one
+The owner saying it is the confirmation. No review queue is involved.
 
-When the owner tells a story with people in it:
-
-1. Draft the episode: what happened, the date, the place.
+1. Draft the bundle: the episode (what happened, the date, the place), the
+   occasion (title, type, date), and a note for any fact that is really about
+   one person ("Sam has a new partner").
 2. Resolve every name with `people_resolve_person`. `ambiguous` means ask which
-   one. `none` means offer to add them. Never invent a person, and never pick.
-3. Check Fellowship for an occasion already logged with those people on that
-   day. If there is one, link to it. Do not log a second.
-4. Propose it as **one group**: the occasion (`people_log_interaction`), the
-   episode (`memory_remember` with attendees and the occasion), and a note for
-   any fact that is really about one person (`people_add_note`).
-5. On confirmation the occasion commits first, so its id exists for the memory
-   to carry.
+   one. `none` means offer to add them with `people_create`. Never invent a
+   person, and never pick.
+3. Look for the occasion first: `people_activity` (or `people_timeline` for
+   one of them) for an occasion on that day with those people, and the
+   `occasionsWithNoStory` list in `memory_review`'s `frontDesk`. If there is
+   one, it is the occasion: skip step 5 and pass its id in step 6.
+4. Show the whole bundle in the conversation and take one yes. The owner may
+   drop any part: no occasion, or no note. The rest still goes in.
+5. `people_log_interaction { title, type, occurredAt, participants: [{ personId }] }`.
+   Read back `event.id`. Leave sentiment out unless the owner said how it went.
+6. `memory_remember { kind: "episode", shelf, occurredOn, body, tags,
+   attendees: [{ uri: "module://people/person/<personId>", label: "<name>" }],
+   occasion: { uri: "module://people/event/<eventId>", label } }`.
+7. Run the `backRef` it returns: `people_update_interaction { eventId, patch:
+   { refs } }`. `refs` replaces the occasion's whole list, so read its current
+   refs first (`people_timeline` `entries[].event.refs` or `people_activity`
+   `events[].refs`) and send them with this one. Passing them to
+   `memory_link_occasion` as `occasionRefs` hands back the merged list.
+8. `people_add_note { personId, body }` for each note.
 
-Leave sentiment out unless the owner said how it went. A mention is not
-presence: someone who texted, called or could not come was not there. Never
-add a bystander to a conflict.
+### A model inferred it (from a transcript or a file)
+
+There is one queue, Reverie's. Nothing is queued in Fellowship.
+
+1. Draft through `memory_draft_context { job: "extract" }` and
+   `memory_propose_draft`. The episode carries the occasion (`occasion: {
+   title, type }`) and any facts about one person (`notes: [{ person, body }]`).
+   Give a person's `uri` only when `people_resolve_person` answered `unique`.
+2. `memory_review` shows them as one group, numbered in commit order: the
+   occasion, the episode, the notes. A group is a heading, not a transaction:
+   the owner may confirm or reject each part.
+3. `memory_decide { proposalId, decision, confirmedByUser: true, pending: {
+   occasion, notes } }`. `pending` carries the owner's answer for the parts
+   riding inside the proposal; each follows `decision` unless given. Reject the
+   occasion and the memory still commits with no occasion. Reject the memory
+   and keep the occasion, and its call still comes back, with nothing to point
+   back at.
+4. `decide` returns `followUp { tool: "people.log_interaction", input, then }`.
+   `input` is the real input, with `refs` already pointing back at the memory.
+   Before running it, look for the occasion as in step 3 above: if it is there,
+   skip the log and link to it. Otherwise run `people_log_interaction` with
+   `input` as given (resolve any participant still a `name` first).
+5. Then `memory_link_occasion { call: then.call, occasion:
+   "module://people/event/<eventId>", label, participants: [{ uri, label }] }`,
+   with the participants Fellowship answered. That resolves the attendee names
+   and takes the memory off the front desk.
+6. Each of `noteFollowUps` is a `people_add_note` call. One with
+   `resolveFirst` names a person still a name: resolve them, fill in
+   `personId`, then write it.
+
+If nobody runs the follow up, the memory stands complete with named attendees
+and is listed under `occasionPending` in `memory_review`'s `frontDesk`, with
+the call to resume. Resuming is a retry: look for the occasion first, so no
+second one is logged.
+
+A conflict (`type: "CONFLICT"`) names in its participants only who was in it.
+Being there does not put an attendee in a conflict: never add a bystander. A
+`followUp` with no participants and a `notice` means ask the owner who was in
+it before logging. Link it with `type: "CONFLICT"` so no attendee is dropped
+from the memory.
+
+### After a write in Fellowship, tell Reverie
+
+When each module runs on its own host no event crosses between them. After a
+Fellowship write, report it with `memory_link_occasion { report: { event,
+payload } }`, the same payload Fellowship's own event carries. The outcome is
+the same as if a host had delivered it.
+
+| You just ran | Report | Reverie does |
+| --- | --- | --- |
+| `people_log_interaction` with no story told here | `people.interaction.logged`, `{ eventId, personIds, occurredAt }` | Lists it under occasions with no story yet. Invents nothing. A later telling attaches to it. |
+| `people_update_interaction` changing participants, title or date | `people.interaction.changed`, `{ eventId, change, occurredAt, title, participants: [{ personId, name }] }` | Updates the attendee references on every memory linked to it. The memory text is untouched. |
+| `people_create` | `people.person.created`, `{ personId, displayName }` | Queues a proposal per memory whose unresolved names now match. Shown in `memory_review`, never applied without the owner's yes. |
+
+An occasion removed in Fellowship is reported as `change: "removed"`: the
+memory keeps its reference, shown as unavailable.
 
 ### Reading one
 
 Asked about a person, a meetup, or "when did I last see": call both.
-`memory_about` for the stories, Fellowship's `people_timeline` and
-`people_insights` for the record. Report them together and say which part came
-from where.
+`memory_about { person }` for the stories, newest first, by `module://people/person/<id>`
+or by a name kept unresolved; `memory_about { person: [jane, john] }` for the
+episodes both were at. Fellowship's `people_timeline` and `people_insights` for
+the record. Report them together and say which part came from where.
+
+Labels on references are snapshots for display, never the authority. When
+both are present and Fellowship shows a different name than a memory holds,
+pass it through: `memory_update { call, people: [{ uri, label }] }`, and add
+`name` to resolve an unresolved name to that person.
 
 ### Without Fellowship
 
-Attendees are kept as names, marked unresolved. Everything else works. Do not
-treat a missing people module as an error.
+Attendees are kept as names, marked unresolved, and listed under
+`unresolvedNames` at the front desk. Everything else works. Do not treat a
+missing people module as an error, and do not try to run a `followUp`.
 
 ## What never goes in
 
@@ -184,8 +253,10 @@ treat a missing people module as an error.
 - **A memory with no source.** Every memory carries where it came from and a
   short quote. No source, no memory.
 - **Facts about other people.** Those belong in Fellowship, as a note on that
-  person (`people_add_note`). Do not draft them into Reverie: nothing here
-  routes them across for you.
+  person (`people_add_note`). A draft carries them in `notes`, which ride to
+  Fellowship as `noteFollowUps`; they are never stored here.
+- **A score about a person.** Sentiment, closeness, a rating: Fellowship's.
+  Reverie refuses one on any person it is given.
 
 ## Procedures are special
 

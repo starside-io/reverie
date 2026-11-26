@@ -249,7 +249,8 @@ cheap (section 24).
 ### The Returns shelf
 
 `DSK/RET` is where an entry waits when the drafter could not tell which shelf it
-belongs on, and where `memory.remember` puts anything given no shelf. Nothing is
+belongs on, and where `memory.remember` puts anything given no shelf (a
+project scoped entry goes to its project's shelf instead). Nothing is
 lost for lack of a home, and nothing is refused for want of one. The front desk
 screen lists what is waiting there to be shelved.
 
@@ -554,13 +555,19 @@ lifted.
 
 ### Single writer and `host.lock`
 
-WAL gives concurrent readers and one writer. The mini-host serializes writes
-through one connection, and `reverie serve` takes `host.lock` beside `host.db`
-and refuses to start while another live host holds it, naming the one that
-does. The lock records how the host was started, which is what lets
-`reverie restart` stop it and start it again the same way. Every session wants
-to write memory, so this matters more here than in Fellowship: two sessions
-writing the same live file at once is the failure the lock exists to prevent.
+WAL gives concurrent readers and one writer at a time. Each process serializes
+its writes through one connection, and `reverie serve` takes `host.lock` beside
+`host.db` and refuses to start while another live host holds it, naming the one
+that does. The lock records how the host was started, which is what lets
+`reverie restart` stop it and start it again the same way.
+
+`reverie mcp` does not take the lock. Every session wants to write memory, so
+each session's MCP server opens the same files directly, beside the others and
+beside `serve`. What keeps them correct is in the write path, not the lock:
+`busy_timeout` is set before anything else, every write transaction takes the
+write lock at its start, call numbers are issued inside that transaction, host
+values change atomically, and a proposal is claimed before it is decided so two
+sessions cannot confirm it twice. A multi-process test holds this.
 
 ### Surface fingerprint
 
@@ -896,8 +903,8 @@ review.
 
 `memory.remember` writes at once with trust `stated`, because you asking is the
 confirmation. It still runs discipline and the duplicate guard. With no shelf
-given it lands on Returns and says so, and it is never refused for want of a
-home.
+given it lands on Returns and says so (a project scoped entry lands on its
+project's shelf), and it is never refused for want of a home.
 
 ### The call number is issued at commit
 

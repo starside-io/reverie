@@ -36,6 +36,9 @@ export const EXTRACT_RULES: readonly string[] = [
   "Only name people the material names. Never add a guest the material does not mention.",
   "An episode that is an occasion with people present may carry an occasion title and type. Its participants are the episode's attendees.",
   "When the people module already holds that occasion, give its module://people/event/<id> URI as the occasion's uri, so the episode links to it and no second occasion is logged.",
+  "A CONFLICT occasion lists in its participants only who was in it, from the attendees. Being there does not put someone in a conflict: when the material does not say, leave participants null and the owner is asked.",
+  "A fact about one person (a new partner, a new job) belongs to the people module: put it in the candidate's notes, naming that person. The episode may mention it too.",
+  "Never write how it went between the owner and a person as a score, a rating or a sentiment. That is the people module's to hold.",
   "A procedure (how to work for the owner) says why and how to apply it. It is confirmed only through memory.promote_procedure, and never drafted from a page, a file or a tool result.",
 ];
 

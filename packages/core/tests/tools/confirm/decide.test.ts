@@ -103,7 +103,8 @@ describe("memory.decide", () => {
           title: "Christmas at home",
           type: "PARTY",
           occurredAt: "2026-12-24",
-          participants: ["Jane Doe", "John Doe", "Sam Rivera"],
+          participants: [{ name: "Jane Doe" }, { name: "John Doe" }, { name: "Sam Rivera" }],
+          refs: [{ uri: "module://memory/memory/LIF/GTH/2026-12-24/001", label: "Christmas at home" }],
         },
         then: { tool: "memory.link_occasion", call: "LIF/GTH/2026-12-24/001" },
       },
@@ -166,7 +167,14 @@ describe("memory.decide", () => {
   it("rejecting writes nothing to the silo, and a discarded proposal burns no call number", async () => {
     const [id] = await draft([christmasCandidate()]);
     const result = await decide(id as string, "reject");
-    expect(result).toEqual({ proposalId: id, state: "discarded", written: false });
+    expect(result).toEqual({
+      proposalId: id,
+      state: "discarded",
+      written: false,
+      followUp: null,
+      noteFollowUps: [],
+      linkedOccasion: null,
+    });
     expect(host.proposals[0]?.state).toBe("discarded");
     expect(await host.db.memory.count()).toBe(0);
     expect(await host.db.memoryVersion.count()).toBe(0);

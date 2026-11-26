@@ -9,11 +9,12 @@
 
 import { atomic, type Db } from "./db.js";
 import { DomainError } from "./errors.js";
+import { EVENT_URI_PATTERN, PERSON_URI_PATTERN, PERSON_URI_PREFIX } from "./people-link.js";
 import { appendVersion, type MutationOptions } from "./versions.js";
 
 /** `module://people/event/<id>`. */
-export const OCCASION_URI_PATTERN = /^module:\/\/people\/event\/[^\s/]+$/;
-export const PERSON_URI_PREFIX = "module://people/person/";
+export const OCCASION_URI_PATTERN = EVENT_URI_PATTERN;
+export { PERSON_URI_PREFIX };
 
 /** A label as stored: MemoryRef.label holds at most 200 characters. */
 const LABEL_MAX = 200;
@@ -36,6 +37,12 @@ export interface OccasionLink {
    * when it did not answer: the attendees are then left as they are.
    */
   attendees: OccasionAttendee[] | null;
+  /**
+   * Sync without removing anyone. For a conflict, whose participants are who
+   * was in it, not everyone who was there: an attendee the memory names is
+   * never dropped for not being a participant.
+   */
+  additive?: boolean;
 }
 
 export interface LinkOccasionResult {
@@ -120,13 +127,14 @@ export async function linkOccasion(
 
       for (const ref of linked) {
         const wanted = participants.get(ref.uri as string);
-        if (wanted === undefined || present.has(ref.uri as string)) {
+        if (present.has(ref.uri as string) || (wanted === undefined && !occasion.additive)) {
           await tx.memoryRef.delete({ where: { id: ref.id } });
           result.removed.push(ref.uri as string);
           changed = true;
           continue;
         }
         present.add(ref.uri as string);
+        if (wanted === undefined) continue;
         if (ref.label !== wanted || !ref.resolved) {
           await tx.memoryRef.update({ where: { id: ref.id }, data: { label: wanted, resolved: true } });
           changed = true;
@@ -164,9 +172,11 @@ export async function linkOccasion(
 
 /**
  * The participants in a refs port answer's detail, read leniently: an array
- * under `participants` or `attendees`, each a person URI, or an object with a `uri`, `ref` or `id` and a `label` or `name`. Anything else is
- * skipped. Null when the detail names no participant list at all. The people
- * module does not answer refs yet, so the shape is a starting value.
+ * under `participants` or `attendees`, each a person URI, or an object with a
+ * `uri`, `ref`, `personId` or `id` and a `label` or `name`. Fellowship answers
+ * an event ref with participants `[{ personId, name }]`. Anything else is
+ * skipped, a sentiment included. Null when the detail names no participant
+ * list at all.
  */
 export function participantsFrom(detail: Record<string, unknown> | undefined): OccasionAttendee[] | null {
   if (!detail) return null;
@@ -195,7 +205,7 @@ export function participantsFrom(detail: Record<string, unknown> | undefined): O
     }
     if (!entry || typeof entry !== "object") continue;
     const record = entry as Record<string, unknown>;
-    const uri = toUri(record.uri, false) ?? toUri(record.ref, false) ?? toUri(record.id, true);
+    const uri = toUri(record.uri, false) ?? toUri(record.ref, false) ?? toUri(record.personId, true) ?? toUri(record.id, true);
     if (!uri) continue;
     const label = typeof record.label === "string" ? record.label : typeof record.name === "string" ? record.name : uri;
     out.push({ uri, label });
@@ -236,4 +246,90 @@ export async function memoriesForOccasion(db: Db, uri: string): Promise<string[]
     orderBy: { callNumber: "asc" },
   });
   return rows.map((row) => row.id);
+}
+
+/** The other memories that point at the occasion behind `uri`, by call number. */
+export async function linkedElsewhere(db: Db, uri: string, memoryId: string): Promise<string[]> {
+  const rows = await db.memory.findMany({
+    where: { id: { not: memoryId }, refs: { some: { role: "occasion", uri } } },
+    select: { callNumber: true },
+    orderBy: { callNumber: "asc" },
+  });
+  return rows.map((row) => row.callNumber);
+}
+
+/** One person as the people module shows them now, and optionally the name a memory kept for them. */
+export interface PersonRefresh {
+  uri: string;
+  label: string;
+  /** An unresolved name on the memory that is this person. */
+  name?: string;
+}
+
+export interface RefreshPeopleResult {
+  changed: boolean;
+  /** Names that now carry a person's URI. */
+  resolvedNames: string[];
+  /** References whose label snapshot moved to the people module's current one. */
+  refreshed: number;
+}
+
+/**
+ * The assistant passing through with both modules present (section 8, "Names
+ * without the other host"): every attendee or mention that carries a
+ * person's URI takes the label the people module shows now, and an
+ * unresolved name given as `name` takes that person's URI. The label is a
+ * snapshot for display, never the authority, so this only ever moves it to
+ * what the people module says. A name that matches nothing on the memory is
+ * left alone; no one is added. One `update` version when anything changed.
+ */
+export async function refreshPeople(
+  db: Db,
+  memoryId: string,
+  people: readonly PersonRefresh[],
+  options: MutationOptions,
+): Promise<RefreshPeopleResult> {
+  for (const person of people) {
+    if (!PERSON_URI_PATTERN.test(person.uri)) {
+      throw new DomainError("invalid_input", "A person is a module://people/person/<id> URI.");
+    }
+  }
+  return atomic(db, async (tx) => {
+    const refs = await tx.memoryRef.findMany({ where: { memoryId, role: { in: ["attendee", "mentions"] } } });
+    const result: RefreshPeopleResult = { changed: false, resolvedNames: [], refreshed: 0 };
+    const gone = new Set<string>();
+    for (const person of people) {
+      const label = clip(person.label) || person.uri;
+      for (const ref of refs) {
+        if (gone.has(ref.id)) continue;
+        if (ref.uri === person.uri && (ref.label !== label || !ref.resolved)) {
+          await tx.memoryRef.update({ where: { id: ref.id }, data: { label, resolved: true } });
+          ref.label = label;
+          ref.resolved = true;
+          result.refreshed += 1;
+        }
+      }
+      if (person.name === undefined) continue;
+      for (const ref of refs) {
+        if (gone.has(ref.id) || ref.uri !== null || !sameName(ref.label, person.name)) continue;
+        // The same person already on the memory under this role: the name was a second copy of them.
+        const twin = refs.find((other) => other !== ref && !gone.has(other.id) && other.role === ref.role && other.uri === person.uri);
+        if (twin) {
+          await tx.memoryRef.delete({ where: { id: ref.id } });
+          gone.add(ref.id);
+          result.resolvedNames.push(ref.label);
+          continue;
+        } else {
+          await tx.memoryRef.update({ where: { id: ref.id }, data: { uri: person.uri, label, resolved: true } });
+        }
+        result.resolvedNames.push(ref.label);
+        ref.uri = person.uri;
+        ref.label = label;
+        ref.resolved = true;
+      }
+    }
+    result.changed = result.refreshed > 0 || result.resolvedNames.length > 0;
+    if (result.changed) await appendVersion(tx, memoryId, { ...options, operation: "update" });
+    return result;
+  });
 }

@@ -91,17 +91,45 @@ describe("listened events", () => {
   });
 
   describe("people.person.created", () => {
-    it("finds the unresolved names that now match, and writes nothing", async () => {
+    it("proposes resolving the unresolved names that now match, one proposal per memory, and writes nothing", async () => {
       const memory = await episode(["Sam Rivera", "Jane Doe"]);
       const versions = await host.db.memoryVersion.count();
-      const result = await host.api.deliver("people.person.created", { uri: PEOPLE.sam.uri, name: "sam rivera" });
+      const result = await host.api.deliver("people.person.created", { personId: PEOPLE.sam.id, displayName: "Sam Rivera" });
       expect(result).toEqual({
         event: "people.person.created",
         handled: true,
-        detail: { person: PEOPLE.sam.uri, matches: [memory.call], proposed: 0 },
+        detail: { person: PEOPLE.sam.uri, matches: [memory.call], proposed: 1, proposalIds: ["proposal-1"] },
+      });
+      expect(host.proposals[0]).toMatchObject({
+        tool: "memory.update",
+        memoryId: memory.id,
+        payload: { call: memory.call, people: [{ uri: PEOPLE.sam.uri, label: "Sam Rivera", name: "Sam Rivera" }] },
+        group: { id: `person:${PEOPLE.sam.uri}` },
+        state: "pending",
       });
       expect(await host.db.memoryVersion.count()).toBe(versions);
       expect((await refs(memory.id)).filter((ref) => ref.role === "attendee").every((ref) => ref.uri === null)).toBe(true);
+    });
+
+    it("delivered twice, queues the proposal once", async () => {
+      await episode(["Sam Rivera"]);
+      await host.api.deliver("people.person.created", { personId: PEOPLE.sam.id, displayName: "Sam Rivera" });
+      const again = await host.api.deliver("people.person.created", { personId: PEOPLE.sam.id, displayName: "Sam Rivera" });
+      expect(again).toMatchObject({ handled: true, detail: { proposed: 0 } });
+      expect(host.proposals).toHaveLength(1);
+    });
+
+    it("confirmed, resolves the name to the person; rejected, leaves it a name", async () => {
+      const memory = await episode(["Sam Rivera", "Jane Doe"]);
+      await host.api.deliver("people.person.created", { personId: PEOPLE.sam.id, displayName: "Sam Rivera" });
+      await host.api.deliver("people.person.created", { personId: PEOPLE.jane.id, displayName: "Jane Doe" });
+      await host.invoke("memory.decide", { proposalId: "proposal-1", decision: "confirm", confirmedByUser: true });
+      await host.invoke("memory.decide", { proposalId: "proposal-2", decision: "reject", confirmedByUser: true });
+      const attendees = (await refs(memory.id)).filter((ref) => ref.role === "attendee");
+      expect(attendees).toEqual([
+        { role: "attendee", uri: null, label: "Jane Doe", resolved: false },
+        { role: "attendee", uri: PEOPLE.sam.uri, label: "Sam Rivera", resolved: true },
+      ]);
     });
 
     it("asks the refs port for the name when the payload carries only the id", async () => {
@@ -114,13 +142,63 @@ describe("listened events", () => {
     });
   });
 
-  it("people.interaction.logged is left to the front desk of a later milestone, and invents no story", async () => {
-    const before = await host.db.memory.count();
-    expect(await host.api.deliver("people.interaction.logged", { uri: OCCASION })).toMatchObject({
-      handled: false,
-      reason: "deferred",
+  describe("people.interaction.logged", () => {
+    const LOGGED = "module://people/event/e_4410";
+
+    it("lists the occasion under occasions with no story yet, in host values, and invents no story", async () => {
+      const before = await host.db.memory.count();
+      const result = await host.api.deliver("people.interaction.logged", {
+        eventId: "e_4410",
+        personIds: [PEOPLE.sam.id, PEOPLE.jane.id],
+        occurredAt: "2026-12-20T00:00:00.000Z",
+      }, { now: NOW });
+      expect(result).toEqual({
+        event: "people.interaction.logged",
+        handled: true,
+        detail: { occasion: LOGGED, listed: true, added: true },
+      });
+      expect(await host.db.memory.count()).toBe(before);
+      const review = await host.invoke<{ frontDesk: { occasionsWithNoStory: unknown[] } }>("memory.review");
+      expect(review.frontDesk.occasionsWithNoStory).toEqual([
+        {
+          occasion: LOGGED,
+          title: null,
+          occurredOn: "2026-12-20",
+          people: [PEOPLE.jane.uri, PEOPLE.sam.uri],
+          loggedAt: NOW.toISOString(),
+        },
+      ]);
     });
-    expect(await host.db.memory.count()).toBe(before);
+
+    it("drops off the list once a story links to it", async () => {
+      await host.api.deliver("people.interaction.logged", { eventId: "e_4410", personIds: [PEOPLE.sam.id], occurredAt: "2026-12-20" });
+      await host.invoke("memory.remember", {
+        kind: "episode",
+        shelf: "LIF/GTH",
+        occurredOn: "2026-12-20",
+        body: "Walked the canal path at Elmwood with Sam Rivera.",
+        attendees: [{ uri: PEOPLE.sam.uri, label: "Sam Rivera" }],
+        occasion: { uri: LOGGED, label: "Canal walk" },
+      });
+      const review = await host.invoke<{ frontDesk: { occasionsWithNoStory: unknown[] } }>("memory.review");
+      expect(review.frontDesk.occasionsWithNoStory).toEqual([]);
+      expect(await host.api.deliver("people.interaction.logged", { eventId: "e_4410", personIds: [], occurredAt: "2026-12-20" })).toMatchObject({
+        handled: true,
+        detail: { listed: false },
+      });
+    });
+
+    it("says so when the host keeps no settings values", async () => {
+      const bare = await testHost({ now: NOW, noValues: true });
+      try {
+        expect(await bare.api.deliver("people.interaction.logged", { eventId: "e_4410", personIds: [] })).toMatchObject({
+          handled: false,
+          reason: "no_settings_values",
+        });
+      } finally {
+        await bare.close();
+      }
+    });
   });
 
   describe("people.interaction.changed", () => {
@@ -137,7 +215,7 @@ describe("listened events", () => {
       expect(result).toEqual({
         event: "people.interaction.changed",
         handled: true,
-        detail: { occasion: OCCASION, memoryIds: [memory.id], changed: [memory.id], attendeesSynced: true },
+        detail: { occasion: OCCASION, change: "updated", memoryIds: [memory.id], changed: [memory.id], attendeesSynced: true },
       });
       expect(await refs(memory.id)).toEqual([
         { role: "attendee", uri: PEOPLE.john.uri, label: "John Doe", resolved: true },

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { SCORE_KEYS, SCORE_REFUSAL } from "../../domain/people-link.js";
 import type { RefRole } from "../../schemas/enums.js";
 import { MODULE_URI_PATTERN, moduleUriSchema, type RefInput } from "../../schemas/ref.js";
 import type { ToolContext } from "../registry.js";
@@ -13,10 +14,38 @@ import type { ToolContext } from "../registry.js";
 
 const LABEL_MAX = 200;
 
+/**
+ * An object input about a person that takes exactly `fields`. A key that
+ * would carry a score or a sentiment is refused with the reason (section 8:
+ * the memory never stores one); any other key it does not know is refused
+ * too, so nothing rides in unread.
+ */
+export function personObject<Shape extends z.ZodRawShape>(fields: Shape) {
+  const known = new Set(Object.keys(fields));
+  return z
+    .object(fields)
+    .passthrough()
+    .superRefine((value, ctx) => {
+      for (const key of Object.keys(value)) {
+        if (known.has(key)) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: SCORE_KEYS.has(key.toLowerCase()) ? SCORE_REFUSAL : `Unknown key "${key}".`,
+        });
+      }
+    })
+    .transform((value) => {
+      const kept: Record<string, unknown> = {};
+      for (const key of known) if (value[key as keyof typeof value] !== undefined) kept[key] = value[key as keyof typeof value];
+      return kept as z.infer<z.ZodObject<Shape>>;
+    });
+}
+
 /** A name as told, a `module://people/person/<id>` URI, or both. */
 export const personInputSchema = z.union([
   z.string().trim().min(1, "A name or a module URI is required").max(2000),
-  z.object({
+  personObject({
     uri: moduleUriSchema,
     label: z.string().trim().min(1).max(LABEL_MAX).optional(),
   }),
@@ -97,10 +126,13 @@ export interface RenderedRef {
 /** A stored reference, rendered through the refs port. The stored label stands when the port cannot answer. */
 export async function renderRef(
   ctx: ToolContext,
-  ref: { role: string; uri: string | null; label: string },
+  ref: { role: string; uri: string | null; label: string; resolved?: boolean },
 ): Promise<RenderedRef> {
   const role = ref.role as RefRole;
   if (ref.uri === null) return { role, uri: null, label: ref.label, status: "unresolved" };
+  // A reference the people module took back, such as an occasion it
+  // removed: the URI is kept so the link shows, and it renders unavailable.
+  if (ref.resolved === false) return { role, uri: ref.uri, label: ref.label, status: "unavailable" };
   const answer = await ctx.ports.refs.resolve(ref.uri);
   if (answer.status === "resolved") return { role, uri: ref.uri, label: answer.label, status: "resolved" };
   return { role, uri: ref.uri, label: ref.label, status: "unavailable" };

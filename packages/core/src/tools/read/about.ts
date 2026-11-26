@@ -37,7 +37,11 @@ const subjectSchema = z.union([
 
 export const aboutInputSchema = z
   .object({
-    person: subjectSchema.optional(),
+    /**
+     * One person, or several: then only memories that carry every one of
+     * them, such as the episodes Jane and John were both at.
+     */
+    person: z.union([subjectSchema, z.array(subjectSchema).min(1).max(10)]).optional(),
     occasion: subjectSchema.optional(),
     /** Retired entries are in the stacks: included only when asked. */
     includeRetired: z.boolean().default(false),
@@ -62,6 +66,8 @@ export interface AboutResult {
   subject: RenderedRef | null;
   /** The name matched against unresolved labels, when one was given. */
   name: string | null;
+  /** The other people asked about, when several were: each memory carries all of them. */
+  with: Array<{ subject: RenderedRef | null; name: string | null }>;
   /** Newest first: by the day it happened, then by call number. */
   items: AboutItem[];
   /** How many match in all; items stops at limit. */
@@ -92,34 +98,42 @@ export const tool = defineTool({
   title: "About a person or occasion",
   kind: "read",
   summary:
-    "Everything attached to a person or an occasion, by reference, newest first. Takes a Fellowship id, a module:// URI, or a name. A name matches the names kept unresolved while Fellowship was absent; it is never guessed into a person. Works with the people module absent.",
+    "Everything attached to a person or an occasion, by reference, newest first. Takes a Fellowship id, a module:// URI, or a name; several people at once give only the memories that carry every one of them. A name matches the names kept unresolved while Fellowship was absent; it is never guessed into a person. Works with the people module absent.",
   input: aboutInputSchema,
   async handler(ctx, input): Promise<AboutResult> {
     const kind = input.person !== undefined ? "person" : "occasion";
-    const subject = subjectOf((input.person ?? input.occasion)!, kind);
+    const asked = (input.person ?? input.occasion)!;
+    const subjects = (Array.isArray(asked) ? asked : [asked]).map((value) => subjectOf(value, kind));
     const roles: RefRole[] = kind === "person" ? ["attendee", "mentions"] : ["occasion"];
 
-    const or: Prisma.MemoryRefWhereInput[] = [];
-    if (subject.uri) or.push({ uri: subject.uri });
-    if (subject.name) or.push({ uri: null });
-    if (or.length === 0) throw new ToolError("invalid_input", "Give an id, a uri or a name.");
+    // Each subject's matches; a memory is kept when it carries every subject.
+    const perSubject: Array<Map<string, { role: RefRole; matchedBy: "uri" | "label" }>> = [];
+    for (const subject of subjects) {
+      const or: Prisma.MemoryRefWhereInput[] = [];
+      if (subject.uri) or.push({ uri: subject.uri });
+      if (subject.name) or.push({ uri: null });
+      if (or.length === 0) throw new ToolError("invalid_input", "Give an id, a uri or a name.");
 
-    const refs = await ctx.db.memoryRef.findMany({
-      where: { role: { in: roles }, OR: or },
-      select: { memoryId: true, role: true, uri: true, label: true },
-    });
-    const matched = new Map<string, { role: RefRole; matchedBy: "uri" | "label" }>();
-    for (const ref of refs) {
-      const byUri = subject.uri !== null && ref.uri === subject.uri;
-      const byLabel = !byUri && subject.name !== null && ref.uri === null && sameName(ref.label, subject.name);
-      if (!byUri && !byLabel) continue;
-      // A URI match outranks a label match; then an attendee outranks a mention.
-      const next = { role: ref.role as RefRole, matchedBy: byUri ? ("uri" as const) : ("label" as const) };
-      const rank = (hit: { role: RefRole; matchedBy: "uri" | "label" }) =>
-        (hit.matchedBy === "uri" ? 2 : 0) + (hit.role === "mentions" ? 0 : 1);
-      const previous = matched.get(ref.memoryId);
-      if (!previous || rank(next) > rank(previous)) matched.set(ref.memoryId, next);
+      const refs = await ctx.db.memoryRef.findMany({
+        where: { role: { in: roles }, OR: or },
+        select: { memoryId: true, role: true, uri: true, label: true },
+      });
+      const matched = new Map<string, { role: RefRole; matchedBy: "uri" | "label" }>();
+      for (const ref of refs) {
+        const byUri = subject.uri !== null && ref.uri === subject.uri;
+        const byLabel = !byUri && subject.name !== null && ref.uri === null && sameName(ref.label, subject.name);
+        if (!byUri && !byLabel) continue;
+        // A URI match outranks a label match; then an attendee outranks a mention.
+        const next = { role: ref.role as RefRole, matchedBy: byUri ? ("uri" as const) : ("label" as const) };
+        const rank = (hit: { role: RefRole; matchedBy: "uri" | "label" }) =>
+          (hit.matchedBy === "uri" ? 2 : 0) + (hit.role === "mentions" ? 0 : 1);
+        const previous = matched.get(ref.memoryId);
+        if (!previous || rank(next) > rank(previous)) matched.set(ref.memoryId, next);
+      }
+      perSubject.push(matched);
     }
+    const [first, ...rest] = perSubject as [Map<string, { role: RefRole; matchedBy: "uri" | "label" }>, ...Array<Map<string, unknown>>];
+    const matched = new Map([...first].filter(([memoryId]) => rest.every((other) => other.has(memoryId))));
 
     const states: MemoryState[] = input.includeRetired ? ["active", "superseded", "retired"] : ["active", "superseded"];
     const where: Prisma.MemoryWhereInput = { id: { in: [...matched.keys()] }, state: { in: states } };
@@ -136,14 +150,17 @@ export const tool = defineTool({
             ctx.db.memory.count({ where }),
           ]);
 
-    const rendered = subject.uri
-      ? await renderRef(ctx, { role: roles[0] as RefRole, uri: subject.uri, label: subject.name ?? subject.uri })
-      : null;
+    const render = (subject: { uri: string | null; name: string | null }) =>
+      subject.uri
+        ? renderRef(ctx, { role: roles[0] as RefRole, uri: subject.uri, label: subject.name ?? subject.uri })
+        : Promise.resolve(null);
+    const [lead, ...others] = subjects as [{ uri: string | null; name: string | null }, ...Array<{ uri: string | null; name: string | null }>];
 
     return {
       notice: RECALL_NOTICE,
-      subject: rendered,
-      name: subject.name,
+      subject: await render(lead),
+      name: lead.name,
+      with: await Promise.all(others.map(async (other) => ({ subject: await render(other), name: other.name }))),
       items: rows.map((row) => {
         const hit = matched.get(row.id)!;
         return { ...toEntry(row), role: hit.role, matchedBy: hit.matchedBy };

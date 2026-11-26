@@ -21,6 +21,12 @@ import type { HostPorts, SettingsValuesPort } from "../../ports.js";
  *                                  a pointer only, never the transcript text,
  *                                  kept for the sessions still in the list
  *                                  above
+ *   people.occasionsWithNoStory    occasions the people module logged
+ *                                  (people.interaction.logged), by URI, day
+ *                                  and people; front-desk.ts
+ *   people.occasionsPending        memory id to the occasion its confirmed
+ *                                  proposal implied, until it is linked;
+ *                                  front-desk.ts
  *
  * Every reader is lenient: a missing port or a value of the wrong shape reads
  * as unset, so a hand edited row never takes a tool down.
@@ -41,7 +47,7 @@ export const OWNER_LINE_MAX_LENGTH = 300;
 /** The most session ids kept as ready for extraction; the oldest drop first. Starting value. */
 export const READY_FOR_EXTRACTION_MAX = 200;
 
-function valuesOf(ports: HostPorts): SettingsValuesPort | null {
+export function valuesOf(ports: HostPorts): SettingsValuesPort | null {
   return ports.settings.values ?? null;
 }
 
@@ -106,7 +112,7 @@ export async function recordConsolidation(ports: HostPorts, now: Date): Promise<
  * and count them over one host.db, and a read then write there loses one of
  * two appends made at the same moment. Null when the host keeps no values.
  */
-async function transact(
+export async function transact(
   ports: HostPorts,
   keys: readonly string[],
   change: (current: Record<string, unknown>) => Record<string, unknown>,

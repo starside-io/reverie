@@ -11,6 +11,9 @@ import { checkSecrets } from "../../domain/discipline.js";
 import { parseInput } from "../../domain/errors.js";
 import { attachSourceRaw, updateMemory } from "../../domain/memories.js";
 import { appendVersion } from "../../domain/versions.js";
+import { refreshPeople, type RefreshPeopleResult } from "../../domain/occasions.js";
+import { PERSON_URI_PATTERN } from "../../domain/people-link.js";
+import { personObject } from "../shared/refs.js";
 import type { MemoryUpdateInput } from "../../schemas/memory.js";
 import { memorySourceInputSchema } from "../../schemas/source.js";
 import { optionalText } from "../../schemas/common.js";
@@ -43,6 +46,22 @@ export const updateInputSchema = z.object({
   kind: MemoryKind.optional(),
   /** True only when the owner explicitly asked to keep something sensitive (section 7). */
   explicitAsk: z.boolean().default(false),
+  /**
+   * People on the memory as the people module shows them now (section 8,
+   * "Names without the other host"): references to `uri` take `label`, and
+   * with `name`, the unresolved name kept for them takes the URI. Nobody is
+   * added. Never a score or a sentiment.
+   */
+  people: z
+    .array(
+      personObject({
+        uri: z.string().trim().regex(PERSON_URI_PATTERN, "Expected a person URI such as module://people/person/<id>"),
+        label: z.string().trim().min(1).max(200),
+        name: z.string().trim().min(1).max(200).optional(),
+      }),
+    )
+    .max(50)
+    .optional(),
 });
 
 export type UpdateInput = z.input<typeof updateInputSchema>;
@@ -52,6 +71,8 @@ export interface UpdateToolResult {
   memory: MemoryView;
   /** False when the input matched what was stored: no version was written. */
   changed: boolean;
+  /** What `people` changed, when it was given. */
+  people?: Omit<RefreshPeopleResult, "changed">;
   /**
    * The memory's vector, when a models port and embedding.model are both
    * set and the title or body changed: `written`, or `missing` with the reason when the model failed. The
@@ -65,7 +86,7 @@ export const tool = defineTool({
   title: "Update a memory",
   kind: "write",
   summary:
-    "A new version of one memory, same call number. Never an in-place edit: the previous content stays readable through history. Discipline runs on the new content. A procedure is never made or changed here: use memory.promote_procedure. To change the kind, or when the world changed rather than the wording, use memory.supersede.",
+    "A new version of one memory, same call number. Never an in-place edit: the previous content stays readable through history. Discipline runs on the new content. A procedure is never made or changed here: use memory.promote_procedure. To change the kind, or when the world changed rather than the wording, use memory.supersede. people refreshes the label snapshots of people on it to what the people module shows now, and resolves an unresolved name to a person's URI.",
   input: updateInputSchema,
   handler: (ctx, input) => commitUpdate(ctx, input),
   auditIds: (input, result) =>
@@ -104,8 +125,20 @@ export async function commitUpdate(
     howToApply: input.howToApply,
     importance: input.importance,
   };
-  if (Object.values(fields).every((value) => value === undefined)) {
-    throw new ToolError("invalid_input", "Nothing to update: give a title, body, why, howToApply or importance.");
+  const contentGiven = !Object.values(fields).every((value) => value === undefined);
+  if (!contentGiven && !input.people) {
+    throw new ToolError("invalid_input", "Nothing to update: give a title, body, why, howToApply, importance or people.");
+  }
+  if (!contentGiven && input.people) {
+    // Only the people on it: no wording changes, so no discipline to rerun and no new vector.
+    const people = await refreshPeople(ctx.db, row.id, input.people as Array<{ uri: string; label: string; name?: string }>, mutation(ctx));
+    const memory = await ctx.db.memory.findUniqueOrThrow({ where: { id: row.id } });
+    if (people.changed) emitWritten(ctx, memory, "update");
+    return {
+      memory: await memoryView(ctx, row.id),
+      changed: people.changed,
+      people: { resolvedNames: people.resolvedNames, refreshed: people.refreshed },
+    };
   }
 
   // Discipline runs on the content as it will stand, at the memory's own
@@ -138,9 +171,17 @@ export async function commitUpdate(
     : await updateMemory(ctx.db, { id: row.id }, patch, mutation(ctx));
 
   const embedding = result.changed ? await storeEmbedding(ctx, row.id, vector) : undefined;
-  if (result.changed) emitWritten(ctx, result.memory, drafted ? "refine" : "update");
+  const people = input.people
+    ? await refreshPeople(ctx.db, row.id, input.people as Array<{ uri: string; label: string; name?: string }>, mutation(ctx))
+    : null;
+  if (result.changed || people?.changed) emitWritten(ctx, result.memory, drafted ? "refine" : "update");
 
-  return { memory: await memoryView(ctx, row.id), changed: result.changed, ...embeddingField(embedding) };
+  return {
+    memory: await memoryView(ctx, row.id),
+    changed: result.changed || (people?.changed ?? false),
+    ...(people ? { people: { resolvedNames: people.resolvedNames, refreshed: people.refreshed } } : {}),
+    ...embeddingField(embedding),
+  };
 }
 
 /** A drafted refine, in one transaction: the citation, the trust, the wording, one version. */

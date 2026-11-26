@@ -15,7 +15,12 @@ describe("memory.review", () => {
   });
 
   it("is empty when nothing waits", async () => {
-    expect(await host.invoke("memory.review")).toEqual({ state: "pending", proposals: [] });
+    expect(await host.invoke("memory.review")).toEqual({
+      state: "pending",
+      proposals: [],
+      groups: [],
+      frontDesk: { occasionPending: [], occasionsWithNoStory: [], unresolvedNames: [], notice: null },
+    });
   });
 
   it("lists the proposals waiting, each naming its tool and payload, with the memory's number", async () => {

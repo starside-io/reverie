@@ -17,12 +17,16 @@ import { z } from "zod";
 import type { QueuedProposal } from "../../ports.js";
 import { defineTool, toToolError, ToolError, type ToolContext } from "../registry.js";
 import { draftedProvenance, type DraftedProvenance } from "../shared/confirm-drafted.js";
+import type { HeldPerson, NoteCall } from "../../domain/people-link.js";
 import {
   assertProposable,
   followUpFor,
+  noteFollowUps,
   splitPayload,
+  type DraftEnvelope,
   type FollowUp,
 } from "../shared/confirm-proposals.js";
+import { findHeldOccasion, recordOccasionPending, type HeldOccasion } from "../shared/front-desk.js";
 import { confirmedByUser } from "../shared/inputs.js";
 import { addSourceInputSchema, commitAddSource } from "../write/add-source.js";
 import { commitRemember, rememberInputSchema } from "../write/remember.js";
@@ -57,37 +61,103 @@ const DRAFTED_COMMITS: Readonly<Record<string, DraftedCommit>> = {
  */
 const MAKES_A_MEMORY: ReadonlySet<string> = new Set(["memory.remember", "memory.supersede"]);
 
+/** What a decision says about the parts riding inside a proposal. */
+const partDecision = z.enum(["confirm", "reject"]);
+
+export const decideInputSchema = z.object({
+  proposalId: z.string().trim().min(1).max(128),
+  decision: z.enum(["confirm", "reject"]),
+  /**
+   * The parts riding inside the proposal, decided one by one (section 8: a
+   * group is a heading, not a transaction). Each one follows `decision`
+   * unless given here: reject the occasion and the memory still commits,
+   * with no occasion; reject the memory and keep the occasion, and the
+   * occasion's call still comes back.
+   */
+  pending: z
+    .object({
+      occasion: partDecision.optional(),
+      /** One per pending note, in the order memory.review lists them. */
+      notes: z.array(partDecision).max(10).optional(),
+    })
+    .strict()
+    .optional(),
+  confirmedByUser,
+});
+
+/** The parts of a proposal's decision beyond the memory: the people module's calls to run, none of them run here. */
+interface PeopleParts {
+  /**
+   * The occasion's people.log_interaction call, when its part was confirmed
+   * and the people module holds no such occasion yet. Null otherwise. This
+   * module never makes the call; whoever confirmed may, and the memory
+   * stands complete if nobody does.
+   */
+  followUp: FollowUp | null;
+  /** One people.add_note call per confirmed note. */
+  noteFollowUps: NoteCall[];
+  /** The occasion the memory was linked to at commit, because the people module already held it. */
+  linkedOccasion: HeldOccasion | null;
+}
+
 export type DecideResult =
-  | { proposalId: string; state: "discarded"; written: false }
-  | {
+  | ({ proposalId: string; state: "discarded"; written: false } & PeopleParts)
+  | ({
       proposalId: string;
       state: "confirmed";
       written: true;
       tool: string;
       /** The memory the write committed, when it committed one. */
       committed: { call: string } | null;
-      /**
-       * For a confirmed episode whose occasion rode in the proposal: the
-       * people module's call to run, then the link back. Null otherwise. This
-       * module never makes either call; whoever confirmed may, and the memory
-       * stands complete if nobody does.
-       */
-      followUp: FollowUp | null;
       /** What the named tool returned. */
       result: unknown;
-    };
+    } & PeopleParts);
 
 /**
  * The memory a write tool's result names, when it names one: `memory` for
  * most, `replacement` for a supersede, whose new entry is what committed.
  */
-function committedMemory(result: unknown): { id: string; call: string } | null {
-  const shaped = result as { memory?: { id?: unknown; call?: unknown }; replacement?: { id?: unknown; call?: unknown } } | null;
+function committedMemory(result: unknown): { id: string; call: string; title: string } | null {
+  type Shaped = { id?: unknown; call?: unknown; title?: unknown };
+  const shaped = result as { memory?: Shaped; replacement?: Shaped } | null;
   const memory = shaped?.replacement ?? shaped?.memory;
   if (memory && typeof memory.id === "string" && typeof memory.call === "string") {
-    return { id: memory.id, call: memory.call };
+    return { id: memory.id, call: memory.call, title: typeof memory.title === "string" ? memory.title : memory.call };
   }
   return null;
+}
+
+/** The people a payload names, as held: a URI with its label, or a name. */
+function payloadPeople(input: Record<string, unknown>): HeldPerson[] {
+  const list = Array.isArray(input["attendees"]) ? (input["attendees"] as unknown[]) : [];
+  const mentions = Array.isArray(input["mentions"]) ? (input["mentions"] as unknown[]) : [];
+  const out: HeldPerson[] = [];
+  for (const entry of [...list, ...mentions]) {
+    if (typeof entry === "string") out.push({ uri: entry.startsWith("module://") ? entry : null, label: entry });
+    else if (entry && typeof entry === "object") {
+      const record = entry as { uri?: unknown; label?: unknown };
+      if (typeof record.uri === "string") out.push({ uri: record.uri, label: typeof record.label === "string" ? record.label : record.uri });
+    }
+  }
+  return out;
+}
+
+/** The memory's people as committed, attendees first: what the follow ups are built from. */
+async function memoryPeople(ctx: ToolContext, memoryId: string): Promise<HeldPerson[]> {
+  const refs = await ctx.db.memoryRef.findMany({
+    where: { memoryId, role: { in: ["attendee", "mentions"] } },
+    select: { role: true, uri: true, label: true },
+  });
+  return [...refs.filter((ref) => ref.role === "attendee"), ...refs.filter((ref) => ref.role !== "attendee")].map(
+    (ref) => ({ uri: ref.uri, label: ref.label }),
+  );
+}
+
+type Pending = z.output<typeof decideInputSchema>["pending"];
+
+/** The notes whose part was confirmed, each following `decision` unless named. */
+function keptNotes(draft: DraftEnvelope | null, decision: "confirm" | "reject", pending: Pending) {
+  return (draft?.pendingNotes ?? []).filter((_note, index) => (pending?.notes?.[index] ?? decision) === "confirm");
 }
 
 export const tool = defineTool({
@@ -96,11 +166,7 @@ export const tool = defineTool({
   kind: "needs-ok",
   summary:
     "Records the owner's decision on one proposal, alone or as a member of its group. confirm runs the tool the proposal names with the payload the owner read; only a write that succeeded marks it confirmed, and a refused one stays pending with the error. reject writes nothing and burns no call number. A confirmed episode with an occasion pending returns a followUp naming the people module call to run, then memory.link_occasion. Only call this after the owner said yes or no to that exact proposal.",
-  input: z.object({
-    proposalId: z.string().trim().min(1).max(128),
-    decision: z.enum(["confirm", "reject"]),
-    confirmedByUser,
-  }),
+  input: decideInputSchema,
   async handler(ctx, input): Promise<DecideResult> {
     const review = ctx.ports.review;
     const proposal = await review.get(input.proposalId);
@@ -119,7 +185,7 @@ export const tool = defineTool({
       });
     }
     try {
-      return await settle(ctx, proposal, input.decision);
+      return await settle(ctx, proposal, input.decision, input.pending);
     } finally {
       await review.release?.(proposal.id);
     }
@@ -142,17 +208,50 @@ async function settle(
   ctx: ToolContext,
   proposal: QueuedProposal,
   decision: "confirm" | "reject",
+  pending: Pending,
 ): Promise<DecideResult> {
   if (decision === "reject") {
+    // Turning a proposal down never fails for a payload it cannot read.
+    let rejected: Record<string, unknown> = {};
+    let draft: DraftEnvelope | null = null;
+    try {
+      ({ input: rejected, draft } = splitPayload(proposal.payload));
+    } catch {
+      // Nothing rides along then.
+    }
     if (!(await ctx.ports.review.decide(proposal.id, "discarded"))) throw alreadyDecided(proposal.id, "decided");
-    return { proposalId: proposal.id, state: "discarded", written: false };
+    // The memory is turned down; a part the owner kept still comes back,
+    // with nothing to point back at.
+    const people = payloadPeople(rejected);
+    const occasion = draft?.pendingOccasion && pending?.occasion === "confirm" ? draft.pendingOccasion : null;
+    return {
+      proposalId: proposal.id,
+      state: "discarded",
+      written: false,
+      followUp: occasion ? followUpFor(occasion, people, null) : null,
+      noteFollowUps: noteFollowUps(keptNotes(draft, decision, pending), people),
+      linkedOccasion: null,
+    };
   }
 
   // Guardrail 8, again at decide time: a proposal that reached the queue by
   // another door still cannot run decide or propose_draft.
   assertProposable(proposal.tool);
 
-  const { input: toolInput, draft } = splitPayload(proposal.payload);
+  const split = splitPayload(proposal.payload);
+  const draft = split.draft;
+  let toolInput = split.input;
+
+  // The occasion's own part. Kept, and the people module may already hold
+  // it by now (logged there since the proposal was drafted): then the memory
+  // links to that one at commit and no second is logged.
+  const occasion = draft?.pendingOccasion && (pending?.occasion ?? decision) === "confirm" ? draft.pendingOccasion : null;
+  let linkedOccasion: HeldOccasion | null = null;
+  if (occasion && proposal.tool === "memory.remember" && toolInput["occasion"] === undefined) {
+    const attendees = payloadPeople({ attendees: toolInput["attendees"] }).map((person) => ({ name: person.label, uri: person.uri }));
+    linkedOccasion = await findHeldOccasion(ctx, occasion.occurredAt, attendees);
+    if (linkedOccasion) toolInput = { ...toolInput, occasion: { uri: linkedOccasion.uri, label: linkedOccasion.label } };
+  }
   const actor = `proposal:${proposal.id}`;
   const drafted = DRAFTED_COMMITS[proposal.tool];
 
@@ -193,14 +292,21 @@ async function settle(
   const memory = committedMemory(result);
   await ctx.ports.review.decide(proposal.id, "confirmed");
 
-  const occasion = draft?.pendingOccasion ?? null;
+  const people = memory ? await memoryPeople(ctx, memory.id) : payloadPeople(toolInput);
+  const followUp = occasion && memory && !linkedOccasion ? followUpFor(occasion, people, memory) : null;
+  // Listed at the front desk as "occasion pending" until it is linked.
+  if (followUp && memory) {
+    await recordOccasionPending(ctx.ports, memory.id, { call: memory.call, occasion: occasion!, at: ctx.now.toISOString() });
+  }
   return {
     proposalId: proposal.id,
     state: "confirmed",
     written: true,
     tool: proposal.tool,
     committed: memory ? { call: memory.call } : null,
-    followUp: occasion && memory ? followUpFor(occasion, memory.call) : null,
+    followUp,
+    noteFollowUps: noteFollowUps(keptNotes(draft, decision, pending), people),
+    linkedOccasion,
     result,
   };
 }

@@ -11,24 +11,25 @@ One user. No auth. No network. One SQLite file on your machine.
 Sibling to [Fellowship](https://github.com/starside-io/fellowship). Fellowship
 holds the people; Reverie holds what you keep of them and of everything else.
 
-**Status: M4, the plugin half.** The silo, the domain, the 41 tools and the
-gate suite are in `packages/core`. The mini-host in `packages/mini-host` serves
-them over `POST /rpc` on 127.0.0.1 and over stdio MCP, and `apps/reverie` is
-the `reverie` binary. The Claude Code plugin is in place: the commands and the
-skill drive those tools, and three hooks add the core block for the project at
-session start (and again after a resume, a `/clear` or a compaction), remind
-the compaction summary to keep session notes, and mark a finished session
-ready for extraction with a pointer to its transcript. A second session in the
-same folder opens knowing what the first pinned, and can draft from what the
-first left behind: `memory_draft_context` lists the finished sessions and
-hands over each one's notes and transcript turns, read off disk by
-`packages/connector-transcripts`, and what it drafts waits in review. Each
-session's MCP server writes the same files directly, beside the others and
-beside `serve`; a test with several real processes writing at once holds
-that to no lost write and no reissued call number. The shared kit with
-Fellowship is not extracted yet. There is no UI (M6) and no
-Fellowship link (M5). The build spec is [`docs/SPEC.md`](docs/SPEC.md),
-milestones M0 to M9.
+**Status: M5, the Fellowship link, Reverie side.** The silo, the domain, the
+41 tools and the gate suite are in `packages/core`. The mini-host in
+`packages/mini-host` serves them over `POST /rpc` on 127.0.0.1 and over stdio
+MCP, and `apps/reverie` is the `reverie` binary. The Claude Code plugin is in
+place: the commands, the skill and three hooks (core block at session start,
+the session note reminder before compaction, and a finished session marked
+ready for extraction). An episode points at its Fellowship occasion and its
+attendees as people references with label snapshots, and hands back the call
+that points the occasion back at the memory. A drafted episode carries its
+occasion and any notes about one guest inside one proposal, shown in review
+as one group whose parts are decided one by one; confirming it returns the
+real `people.log_interaction` input with the reference back included. The
+front desk lists occasion pending, occasions with no story yet and unresolved
+names. The three people events are handled when a host delivers them, and the
+assistant can report them through `memory_link_occasion` when the two run on
+separate hosts. Reverie never calls Fellowship and stores no score about a
+person. The shared kit with Fellowship is not extracted yet, and there is no
+UI (M6). The build spec is [`docs/SPEC.md`](docs/SPEC.md), milestones M0 to
+M9.
 
 ## What it does, once built
 

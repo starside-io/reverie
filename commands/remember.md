@@ -29,8 +29,15 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
    project, `scope: "project"` keeps it with that project. Trust is `stated`,
    because the owner asking is the confirmation. Tags typed as `#tag` are
    attached as written.
-5. **If people were there**, follow the Fellowship procedure in the skill
-   before writing: names go in `attendees`, the occasion in `occasion`.
+5. **If people were there**, follow the skill's "The owner told it" procedure
+   before writing. With `people_*` tools present: resolve each name with
+   `people_resolve_person`, look for the occasion already logged that day
+   (`people_activity`), else `people_log_interaction` first, then
+   `memory_remember` with `attendees: [{ uri: "module://people/person/<id>", label }]`
+   and `occasion: { uri: "module://people/event/<id>", label }`, then run the
+   `backRef` it returns with `people_update_interaction`, merged with the
+   occasion's current refs. Without `people_*`: names go in `attendees` as
+   told, and stay unresolved. Never put a sentiment or a score on a person.
 6. **Report the call number** it was shelved under, and the shelf by name.
 
 ## Rules

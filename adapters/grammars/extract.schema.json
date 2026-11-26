@@ -126,6 +126,23 @@
                       }
                     ],
                     "default": null
+                  },
+                  "participants": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "maxItems": 30
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null
                   }
                 },
                 "required": [
@@ -139,6 +156,31 @@
               }
             ],
             "default": null
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "person": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "body": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                }
+              },
+              "required": [
+                "person",
+                "body"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 10,
+            "default": []
           },
           "why": {
             "anyOf": [

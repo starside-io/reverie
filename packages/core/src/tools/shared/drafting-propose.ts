@@ -34,7 +34,9 @@ import { dayKey } from "../../schemas/common.js";
 import type { TrustTier } from "../../schemas/enums.js";
 import { normaliseTagSlug } from "../../schemas/tag.js";
 import { ToolError, type ToolContext } from "../registry.js";
-import { DRAFT_KEY, type DraftEnvelope, type PendingOccasion } from "./confirm-proposals.js";
+import { CONFLICT_TYPE } from "../../domain/people-link.js";
+import { DRAFT_KEY, type DraftEnvelope, type PendingNote, type PendingOccasion } from "./confirm-proposals.js";
+import { findHeldOccasion, type HeldOccasion } from "./front-desk.js";
 import { projectShelfPath, resolveProject } from "./project.js";
 import { scopeRefFor } from "./session.js";
 import { readOwnerLine } from "./host-values.js";
@@ -112,6 +114,8 @@ export interface PreparedCandidate {
   occasion: PendingOccasion | null;
   /** The occasion the people module already holds, linked on the memory itself. */
   linkedOccasion: LinkedOccasion | null;
+  /** Facts about one of the people, for the people module, riding beside the memory. */
+  notes: PendingNote[];
 }
 
 export interface CandidateContext {
@@ -215,6 +219,8 @@ export async function prepareCandidate(
   const attendees: AttendeeInput[] = [];
   const mentions: AttendeeInput[] = [];
   const ambiguous: string[] = [];
+  /** Each person as resolved: a URI only when the people module named exactly one person. */
+  const held = new Map<string, string | null>();
   for (const person of candidate.people) {
     if (!namedInMaterial(context.text, person.name)) {
       return reject(index, "person-not-in-material", "The draft names a person the material does not mention.", {
@@ -232,9 +238,33 @@ export async function prepareCandidate(
     if (uri) {
       const answer = await ctx.ports.refs.resolve(uri);
       into.push(answer.status === "resolved" ? { uri, label: person.name } : person.name);
+      held.set(normaliseWhitespace(person.name).toLowerCase(), answer.status === "resolved" ? uri : null);
     } else {
       into.push(person.name);
+      held.set(normaliseWhitespace(person.name).toLowerCase(), null);
     }
+  }
+  const heldUri = (name: string) => held.get(normaliseWhitespace(name).toLowerCase()) ?? null;
+
+  // A fact about one of the people goes to the people module as a note on
+  // them. It names one of this candidate's people, and passes discipline.
+  const notes: PendingNote[] = [];
+  for (const note of candidate.notes) {
+    const person = candidate.people.find(
+      (entry) => normaliseWhitespace(entry.name).toLowerCase() === normaliseWhitespace(note.person).toLowerCase(),
+    );
+    if (!person) {
+      return reject(index, "note-person-unknown", "A note is about one of the candidate's people, by the name the material gives.", {
+        name: note.person,
+      });
+    }
+    const noteVerdict = runDiscipline({ kind: "fact", title: note.person, body: note.body, sourceTrust, explicitAsk });
+    if (noteVerdict.findings.length > 0) {
+      return reject(index, "discipline", `A note was refused by discipline. ${noteVerdict.findings.map((f) => f.reason).join(" ")}`, {
+        findings: shownFindings(noteVerdict.findings),
+      });
+    }
+    notes.push({ person: person.name, uri: heldUri(person.name), body: note.body, occurredAt: candidate.occurredOn });
   }
 
   let occasion: PendingOccasion | null = null;
@@ -243,16 +273,31 @@ export async function prepareCandidate(
     if (candidate.kind !== "episode") {
       return reject(index, "occasion-not-episode", "Only an episode carries an occasion.");
     }
-    const participants = candidate.people.filter((person) => person.role === "attendee").map((person) => person.name);
-    if (participants.length === 0) {
+    const present = candidate.people.filter((person) => person.role === "attendee").map((person) => person.name);
+    if (present.length === 0) {
       return reject(index, "occasion-without-attendees", "An occasion needs at least one attendee the material names.");
     }
+    // A conflict never gains a bystander: its participants are only who the
+    // draft says was in it, each one an attendee. Any other occasion's
+    // participants are the attendees.
+    let participants = present;
+    if (candidate.occasion.type === CONFLICT_TYPE) {
+      participants = [];
+      for (const name of candidate.occasion.participants ?? []) {
+        const match = present.find((entry) => normaliseWhitespace(entry).toLowerCase() === normaliseWhitespace(name).toLowerCase());
+        if (!match) {
+          return reject(index, "conflict-participant-not-attendee", "Who was in a conflict is named among the episode's attendees.", { name });
+        }
+        if (!participants.includes(match)) participants.push(match);
+      }
+    }
     // One event, not two: an occasion the people module already holds is
-    // linked, never logged again. Named by the drafter, or found on an
-    // episode already linked to it on that day with the same people.
+    // linked, never logged again. Named by the drafter, found on an episode
+    // already linked to it on that day with the same people, or reported
+    // logged by the people module that day with the same people.
     linkedOccasion = candidate.occasion.uri
       ? { uri: candidate.occasion.uri, label: candidate.occasion.title, via: "named" }
-      : await occasionAlreadyLinked(ctx, candidate.occurredOn, participants);
+      : await findHeldOccasion(ctx, candidate.occurredOn, present.map((name) => ({ name, uri: heldUri(name) })));
     if (!linkedOccasion) {
       occasion = {
         title: candidate.occasion.title,
@@ -307,50 +352,12 @@ export async function prepareCandidate(
     explicitAsk,
     occasion,
     linkedOccasion,
+    notes,
   };
 }
 
 /** An occasion the people module already holds, which a drafted episode links to. */
-export interface LinkedOccasion {
-  uri: string;
-  label: string;
-  /** `named`: the drafter gave its URI. `found`: an episode that day already links it, with the same people. */
-  via: "named" | "found";
-  /** The episode that already links it, when found. */
-  call?: string;
-}
-
-/**
- * The occasion an active episode on this day already links to, with the same
- * people, compared by name, case folded. Starting value for "the same people":
- * the same set of names. Null when there is none, or more than one.
- */
-async function occasionAlreadyLinked(
-  ctx: ToolContext,
-  occurredOn: string,
-  participants: readonly string[],
-): Promise<LinkedOccasion | null> {
-  const day = new Date(`${occurredOn}T00:00:00.000Z`);
-  const rows = await ctx.db.memory.findMany({
-    where: { kind: "episode", state: "active", occurredOn: day, refs: { some: { role: "occasion", uri: { not: null } } } },
-    include: { refs: true },
-    orderBy: { callNumber: "asc" },
-  });
-  const wanted = new Set(participants.map((name) => normaliseWhitespace(name).toLowerCase()));
-  const found = new Map<string, LinkedOccasion>();
-  for (const row of rows) {
-    const occasionRef = row.refs.find((ref) => ref.role === "occasion" && ref.uri !== null);
-    if (!occasionRef?.uri) continue;
-    const names = new Set(
-      row.refs.filter((ref) => ref.role === "attendee").map((ref) => normaliseWhitespace(ref.label).toLowerCase()),
-    );
-    if (names.size !== wanted.size || [...wanted].some((name) => !names.has(name))) continue;
-    if (!found.has(occasionRef.uri)) {
-      found.set(occasionRef.uri, { uri: occasionRef.uri, label: occasionRef.label, via: "found", call: row.callNumber });
-    }
-  }
-  return found.size === 1 ? ([...found.values()][0] as LinkedOccasion) : null;
-}
+export type LinkedOccasion = HeldOccasion;
 
 function isRejection(value: PreparedCandidate | DraftRejection): value is DraftRejection {
   return "code" in value && "reason" in value && !("candidate" in value);
@@ -365,6 +372,7 @@ function envelope(job: DraftEnvelope["job"], prepared: PreparedCandidate, sessio
     quote: prepared.candidate.quote,
     sessionDate,
     pendingOccasion: prepared.occasion,
+    ...(prepared.notes.length > 0 ? { pendingNotes: prepared.notes } : {}),
     ...(prepared.ambiguous.length > 0 ? { questions: prepared.ambiguous.map(ambiguousQuestion) } : {}),
     ...(prepared.newTags.length > 0 ? { newTags: prepared.newTags } : {}),
   };
@@ -452,9 +460,12 @@ function summaryFor(lead: string, prepared: PreparedCandidate): string {
     parts.push(
       prepared.linkedOccasion.call
         ? `links to the occasion ${prepared.linkedOccasion.call} already links, not a second one`
-        : `links to the occasion already held: ${prepared.linkedOccasion.label}`,
+        : prepared.linkedOccasion.via === "logged"
+          ? `links to the occasion the people module logged that day, not a second one: ${prepared.linkedOccasion.label}`
+          : `links to the occasion already held: ${prepared.linkedOccasion.label}`,
     );
   }
+  if (prepared.notes.length > 0) parts.push(`notes for the people module: ${prepared.notes.map((note) => note.person).join(", ")}`);
   if (prepared.ambiguous.length > 0) parts.push(`ask who: ${prepared.ambiguous.join(", ")}`);
   return parts.join(". ");
 }
@@ -480,7 +491,7 @@ export function eventGroup(occasion: PendingOccasion): ProposalGroup {
   return {
     id: `event:${shortDigest([occasion.title, occasion.occurredAt, occasion.participants])}`,
     title: `${occasion.title}, ${occasion.occurredAt}`,
-    detail: `With ${occasion.participants.join(", ")}`,
+    ...(occasion.participants.length > 0 ? { detail: `With ${occasion.participants.join(", ")}` } : {}),
     meta: { job: "extract", occurredAt: occasion.occurredAt },
   };
 }

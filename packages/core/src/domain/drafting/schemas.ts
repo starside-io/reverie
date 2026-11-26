@@ -98,6 +98,27 @@ export const draftOccasionSchema = z
       .regex(/^module:\/\/people\/event\/[^\s/]+$/, "Expected module://people/event/<id>")
       .nullable()
       .default(null),
+    /**
+     * Only for a CONFLICT: who was in it, by name, from the episode's
+     * attendees. Being there does not put an attendee in a conflict, so
+     * nobody is assumed: left null, the owner is asked. Ignored for any
+     * other type, whose participants are the attendees.
+     */
+    participants: z.array(z.string().trim().min(1).max(200)).max(30).nullable().default(null),
+  })
+  .strict();
+
+/**
+ * A fact about one person the material gives ("Sam has a new partner"). It
+ * lives in the people module as a note on that person, not in this library;
+ * it rides beside the candidate for whoever confirms to write there.
+ */
+export const draftPersonNoteSchema = z
+  .object({
+    /** One of the candidate's people, by the name the material gives. */
+    person: z.string().trim().min(1).max(200),
+    /** The fact, in plain words, with every date written out. */
+    body: z.string().trim().min(1).max(1000),
   })
   .strict();
 
@@ -116,6 +137,8 @@ export const extractCandidateSchema = z
     people: z.array(draftPersonSchema).max(30).default([]),
     /** Only on an episode. */
     occasion: draftOccasionSchema.nullable().default(null),
+    /** Facts about one of the candidate's people, for the people module. Never a score or how it went. */
+    notes: z.array(draftPersonNoteSchema).max(10).default([]),
     /** A procedure says why and how to apply it. */
     why: z.string().trim().min(1).max(2000).nullable().default(null),
     howToApply: z.string().trim().min(1).max(2000).nullable().default(null),

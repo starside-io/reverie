@@ -1,5 +1,7 @@
-import { linkOccasion, markOccasionUnavailable, memoriesForOccasion, participantsFrom, OCCASION_URI_PATTERN, PERSON_URI_PREFIX } from "./domain/occasions.js";
+import { linkOccasion, markOccasionUnavailable, memoriesForOccasion, participantsFrom } from "./domain/occasions.js";
+import { readInteractionChanged, readInteractionLogged, readPersonCreated } from "./domain/people-link.js";
 import type { HostPorts, ListenedEventName } from "./ports.js";
+import { dropLoggedOccasion, recordOccasionLogged } from "./tools/shared/front-desk.js";
 import { endSession } from "./tools/shared/host-values.js";
 
 /**
@@ -12,9 +14,12 @@ import { endSession } from "./tools/shared/host-values.js";
  * for it in core or the mini-host, so there is no Fellowship mechanism to
  * lift here. This is the smallest one that fits the same boundary: the host
  * calls deliver with the event's name and payload, core does what it can with
- * its own ports, and the answer says what happened. Payload shapes are
- * starting readings: the people module does not emit two of these yet
- * (section 8).
+ * its own ports, and the answer says what happened. The people payloads are
+ * read in domain/people-link.ts, the one place that knows their shape.
+ *
+ * Under two standalone hosts no bus carries the people events across. The
+ * assistant tells Reverie instead, through memory.link_occasion's `report`
+ * form, which calls deliverEvent here: one handler, either way.
  *
  * While incognito is on nothing is written, as no write tool runs then
  * (section 7: no session is marked for extraction).
@@ -94,52 +99,89 @@ export async function deliverEvent(
 
     case "people.person.created": {
       // Section 18: proposes resolving unresolved attendee names that now
-      // match. What the domain supports today is finding them: every
-      // unresolved attendee or mention whose label is the new person's name.
-      // Proposing the resolution needs a write tool that sets a reference's
-      // URI on a memory, and none of the 41 does (memory.link_occasion
-      // resolves names only against an occasion's participants, and
-      // memory.update takes no people), so the proposal belongs with the
-      // Fellowship link (M5). The matches are reported, nothing is written,
-      // and a name is never turned into a person here.
-      const uri = text(payload, "uri") ?? (text(payload, "personId", "id") ? `${PERSON_URI_PREFIX}${text(payload, "personId", "id")}` : null);
-      let label = text(payload, "name", "label");
-      if (!label && uri) {
-        const resolution = await ports.refs.resolve(uri);
+      // match. One proposal per memory, through review, never applied here:
+      // memory.update with `people`, which the owner confirms with decide.
+      // A name is never turned into a person without that yes.
+      const created = readPersonCreated(payload);
+      let label = created.name;
+      if (!label && created.uri) {
+        const resolution = await ports.refs.resolve(created.uri);
         if (resolution.status === "resolved") label = resolution.label;
       }
-      if (!label) return { event, handled: false, reason: "invalid_payload", detail: { expected: "name or a resolvable uri" } };
+      if (!label || !created.uri) {
+        return { event, handled: false, reason: "invalid_payload", detail: { expected: "personId and displayName" } };
+      }
+      const name = label;
+      const uri = created.uri;
       const refs = await db.memoryRef.findMany({
-        where: { uri: null, role: { in: ["attendee", "mentions"] } },
+        where: { uri: null, role: { in: ["attendee", "mentions"] }, memory: { state: { in: ["active", "superseded"] } } },
         select: { memoryId: true, label: true, memory: { select: { callNumber: true } } },
       });
-      const calls = [...new Set(refs.filter((ref) => sameName(ref.label, label)).map((ref) => ref.memory.callNumber))].sort();
-      return { event, handled: true, detail: { person: uri, matches: calls, proposed: 0 } };
+      const matching = refs.filter((ref) => sameName(ref.label, name));
+      const byMemory = new Map<string, { call: string; names: Set<string> }>();
+      for (const ref of matching) {
+        const entry = byMemory.get(ref.memoryId) ?? { call: ref.memory.callNumber, names: new Set<string>() };
+        entry.names.add(ref.label);
+        byMemory.set(ref.memoryId, entry);
+      }
+      const group = { id: `person:${uri}`, title: `Names that now match ${name}`, detail: "Added in the people module" };
+      // Delivered twice, the same proposal is not queued twice.
+      const waiting = new Set(
+        (await ports.review.list("pending"))
+          .filter((row) => row.tool === "memory.update" && row.group?.id === group.id && row.memoryId)
+          .map((row) => row.memoryId as string),
+      );
+      const proposalIds: string[] = [];
+      for (const [memoryId, entry] of [...byMemory.entries()].sort((a, b) => (a[1].call < b[1].call ? -1 : 1))) {
+        if (waiting.has(memoryId)) continue;
+        const names = [...entry.names].sort();
+        const queued = await ports.review.propose({
+          tool: "memory.update",
+          memoryId,
+          payload: { call: entry.call, people: names.map((told) => ({ uri, label: name, name: told })) },
+          summary: `Resolve ${names.map((told) => `"${told}"`).join(", ")} on ${entry.call} to ${name}, just added in the people module`,
+          group,
+        });
+        proposalIds.push(queued.id);
+      }
+      const calls = [...byMemory.values()].map((entry) => entry.call).sort();
+      return { event, handled: true, detail: { person: uri, matches: calls, proposed: proposalIds.length, proposalIds } };
     }
 
-    case "people.interaction.logged":
-      // Section 18: lists the occasion under "occasions with no story yet".
-      // That list is a front desk screen (section 20), which is the
-      // standalone UI (M6) reading the Fellowship link (M5); nothing in the
-      // silo holds it, and no story is ever invented for it. Nothing to do
-      // in core until then.
-      return { event, handled: false, reason: "deferred", detail: { milestone: "M5/M6", list: "occasions with no story yet" } };
+    case "people.interaction.logged": {
+      // Section 18: lists the occasion under "occasions with no story yet",
+      // kept in host.db, never in the silo. No story is invented for it; a
+      // telling of that day with those people attaches to it instead of
+      // logging a second (front-desk.ts, findHeldOccasion).
+      const logged = readInteractionLogged(payload);
+      if (!logged) return { event, handled: false, reason: "invalid_payload", detail: { expected: "eventId" } };
+      const told = await memoriesForOccasion(db, logged.occasion);
+      if (told.length > 0) {
+        return { event, handled: true, detail: { occasion: logged.occasion, listed: false, toldBy: told.length } };
+      }
+      const added = await recordOccasionLogged(ports, logged, now);
+      if (added === null) return { event, handled: false, reason: "no_settings_values" };
+      return { event, handled: true, detail: { occasion: logged.occasion, listed: true, added } };
+    }
 
     case "people.interaction.changed": {
       // Section 18: updates the attendee references on memories linked to
       // that occasion, or marks the occasion unavailable when it is removed.
-      const uri = text(payload, "uri") ?? (text(payload, "interactionId", "id") ? `module://people/event/${text(payload, "interactionId", "id")}` : null);
-      if (!uri || !OCCASION_URI_PATTERN.test(uri)) {
-        return { event, handled: false, reason: "invalid_payload", detail: { expected: "a module://people/event/<id> uri" } };
+      // The memory's text is never touched: what happened is Reverie's.
+      const changed = readInteractionChanged(payload);
+      if (!changed) {
+        return { event, handled: false, reason: "invalid_payload", detail: { expected: "eventId and change" } };
       }
-      if (payload["removed"] === true) {
+      const uri = changed.occasion;
+      if (changed.change === "removed") {
+        await dropLoggedOccasion(ports, uri);
         const memoryIds = await markOccasionUnavailable(db, uri, mutation);
         return { event, handled: true, detail: { occasion: uri, removed: true, memoryIds } };
       }
 
       // The participants ride in the payload, or the refs port answers them.
-      let participants = participantsFrom(payload);
-      let label = text(payload, "label", "title");
+      let participants = changed.participants;
+      let label = changed.title;
       if (participants === null || label === null) {
         const resolution = await ports.refs.resolve(uri);
         if (resolution.status === "resolved") {
@@ -148,16 +190,16 @@ export async function deliverEvent(
         }
       }
       const memoryIds = await memoriesForOccasion(db, uri);
-      const changed: string[] = [];
+      const synced: string[] = [];
       for (const memoryId of memoryIds) {
-        const current = label ?? (await db.memoryRef.findFirst({ where: { memoryId, role: "occasion", uri }, select: { label: true } }))?.label ?? uri;
-        const result = await linkOccasion(db, memoryId, { uri, label: current, attendees: participants }, mutation);
-        if (result.changed) changed.push(memoryId);
+        const current = await db.memoryRef.findFirst({ where: { memoryId, role: "occasion", uri }, select: { label: true } });
+        const result = await linkOccasion(db, memoryId, { uri, label: label ?? current?.label ?? uri, attendees: participants }, mutation);
+        if (result.changed) synced.push(memoryId);
       }
       return {
         event,
         handled: true,
-        detail: { occasion: uri, memoryIds, changed, attendeesSynced: participants !== null },
+        detail: { occasion: uri, change: changed.change, memoryIds, changed: synced, attendeesSynced: participants !== null },
       };
     }
   }

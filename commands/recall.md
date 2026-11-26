@@ -18,7 +18,9 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 
 1. `memory_recall` with the text as `query`, and any `#tags` as `tags`.
 2. If the question names a person or a gathering, also `memory_about` with
-   `person` or `occasion`, and read Fellowship as the skill describes. The story is in Reverie; who was
+   `person` (a `module://people/person/<id>` URI when `people_resolve_person`
+   gave one, else the name as told; several for "what did Jane and John and
+   I do") or `occasion`, and read Fellowship as the skill describes. The story is in Reverie; who was
    there and how it went is in Fellowship.
 3. Report each memory with its call number, how old it is, and where it came
    from.

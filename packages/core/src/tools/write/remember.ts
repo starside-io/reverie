@@ -25,6 +25,7 @@ import { memoryView, type MemoryView } from "../shared/views.js";
 import { emitWritten } from "../shared/write-common.js";
 import { embeddingField, prepareEmbedding, storeEmbedding } from "../shared/embedding.js";
 import type { EmbeddingOutcome } from "../../domain/embeddings.js";
+import { backRefCall, memoryUri, type BackRefCall } from "../../domain/people-link.js";
 
 /** A title cut from the body when none is given. Starting value. */
 export const DERIVED_TITLE_MAX = 80;
@@ -91,6 +92,12 @@ export interface RememberResult {
    * memory is committed either way. Absent when vectors are off.
    */
   embedding?: EmbeddingOutcome;
+  /**
+   * When the occasion is one the people module holds (a module://people/event
+   * URI): the people.update_interaction call that points it back at this
+   * memory. Null otherwise. This module never makes it.
+   */
+  backRef: BackRefCall | null;
 }
 
 export const tool = defineTool({
@@ -212,8 +219,10 @@ export async function commitRemember(
   emitWritten(ctx, created, "create");
 
   const memory = await memoryView(ctx, created.id);
+  const occasionUri = memory.occasion?.uri ?? null;
   return {
     memory,
+    backRef: occasionUri ? backRefCall(occasionUri, { uri: memoryUri(memory.call), label: memory.title }) : null,
     landedOnReturns,
     notice: landedOnReturns
       ? `No shelf was given, so ${memory.call} waits on ${memory.shelf} to be shelved.`

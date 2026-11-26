@@ -96,7 +96,13 @@ describe("a draft, confirmed, runs the real tool it names", () => {
       expect(proposed.groups[0]?.title).toBe("Christmas at home, 2026-12-24");
       expect(decided.followUp).toEqual({
         tool: "people.log_interaction",
-        input: { title: "Christmas at home", type: "PARTY", occurredAt: "2026-12-24", participants: ["Jane Doe", "Sam Rivera"] },
+        input: {
+          title: "Christmas at home",
+          type: "PARTY",
+          occurredAt: "2026-12-24",
+          participants: [{ name: "Jane Doe" }, { name: "Sam Rivera" }],
+          refs: [{ uri: "module://memory/memory/LIF/GTH/2026-12-24/001", label: "Christmas at home" }],
+        },
         then: { tool: "memory.link_occasion", call: "LIF/GTH/2026-12-24/001" },
       });
 
@@ -108,8 +114,8 @@ describe("a draft, confirmed, runs the real tool it names", () => {
           { uri: PEOPLE.sam.uri, label: PEOPLE.sam.name },
         ],
       });
-      const linked = await host.invoke<LinkOccasionToolResult>(decided.followUp!.then.tool, {
-        call: decided.followUp!.then.call,
+      const linked = await host.invoke<LinkOccasionToolResult>(decided.followUp!.then!.tool, {
+        call: decided.followUp!.then!.call,
         occasion,
       });
       expect(linked.memory.call).toBe("LIF/GTH/2026-12-24/001");
