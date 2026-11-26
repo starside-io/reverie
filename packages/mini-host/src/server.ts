@@ -1,4 +1,8 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 
 import { surfaceFingerprint, tools as coreTools } from "@reverie/core";
@@ -12,6 +16,7 @@ import {
   releaseHostLock,
   updateHostLock,
 } from "./host-lock.js";
+import { ownerGuard } from "./guard.js";
 import { rpcRoutes } from "./rpc.js";
 
 /**
@@ -19,8 +24,13 @@ import { rpcRoutes } from "./rpc.js";
  * to the host rather than to the memory module: the review queue, the audit
  * log, the event feed and the config. Lifted from Fellowship's server.ts,
  * without the media route, the avatar preview and the drafter routes, which
- * Reverie does not have. There is no UI yet (M6), so `/` answers one line of
- * plain text and nothing is served from disk.
+ * Reverie does not have. The built UI is served from disk when there is one
+ * (uiDir, or REVERIE_UI_DIR), and every other path falls back to its
+ * index.html so a deep link opens the right screen. With no build, `/`
+ * answers one plain line saying so.
+ *
+ * Every request passes the owner guard first (guard.ts): loopback names only,
+ * and no write from a page on another origin.
  */
 
 /** Fellowship's host defaults to 4319. Reverie's sits ten above it, so both can run. */
@@ -36,10 +46,20 @@ export const PORT_ENV = "REVERIE_PORT";
 export const HOSTNAME = "127.0.0.1";
 
 export const NO_UI_TEXT =
-  "Reverie is running. There is no UI yet: use POST /rpc, or the MCP server (reverie mcp).\n";
+  "Reverie is running. The UI is not built: run pnpm build, or point REVERIE_UI_DIR at a built packages/ui/dist. POST /rpc and the MCP server (reverie mcp) work either way.\n";
 
-export function createApp(host: MiniHost): Hono {
+/** Where the built UI is, when no option says. */
+export const UI_DIR_ENV = "REVERIE_UI_DIR";
+
+export interface AppOptions {
+  /** The built UI. Omitted, or missing on disk, serves NO_UI_TEXT on `/` instead. */
+  uiDir?: string;
+}
+
+export function createApp(host: MiniHost, options: AppOptions = {}): Hono {
   const app = new Hono();
+
+  app.use("*", ownerGuard());
 
   // pid and fingerprint let a client tell this process apart from another
   // host, and this code apart from older code.
@@ -146,9 +166,43 @@ export function createApp(host: MiniHost): Hono {
 
   app.route("/host", hostRoutes);
 
-  app.get("/", (context) => context.text(NO_UI_TEXT));
+  const uiDir = options.uiDir;
+  if (uiDir && existsSync(join(uiDir, "index.html"))) {
+    uiRoutes(app, uiDir);
+  } else {
+    app.get("/", (context) => context.text(NO_UI_TEXT));
+  }
 
   return app;
+}
+
+/**
+ * The built SPA, plus a fallback so a deep link such as
+ * /memory/LIF/GTH/2026-12-24/001 is served the shell rather than a 404. The
+ * host owns /rpc, /host and /health, which are routed before this, so the
+ * fallback only ever answers what is left. Lifted from Fellowship's
+ * uiRoutes.
+ */
+function uiRoutes(app: Hono, dir: string): void {
+  const index = join(dir, "index.html");
+
+  // Vite fingerprints these, so they can be cached hard. Set once the file
+  // is found: serveStatic's own onFound runs after its response is built,
+  // too late for a header to stick.
+  app.use("/assets/*", async (context, next) => {
+    await next();
+    if (context.res.status === 200) context.res.headers.set("cache-control", "public, max-age=31536000, immutable");
+  });
+  app.use("/assets/*", serveStatic({ root: dir }));
+  app.use("/favicon.svg", serveStatic({ root: dir }));
+
+  app.get("*", (context) => {
+    // A script or a fetch asking for a file that is not there gets a 404,
+    // not a page of HTML it cannot use.
+    const accept = context.req.header("accept") ?? "";
+    if (!accept.includes("text/html")) return context.body(null, 404);
+    return context.html(readFileSync(index, "utf8"));
+  });
 }
 
 function limitOf(raw: string | undefined): number {
@@ -173,6 +227,8 @@ export interface ServeOptions extends MiniHostOptions {
   lock?: boolean;
   /** 0 asks the OS for a free port. */
   port?: number;
+  /** The built UI. Defaults to REVERIE_UI_DIR; with neither, `/` says the UI is not built. */
+  uiDir?: string;
 }
 
 export interface RunningHost {
@@ -204,7 +260,8 @@ export async function serveMiniHost(options: ServeOptions = {}): Promise<Running
     if (locking) releaseHostLock(lockPath);
     throw error;
   }
-  const app = createApp(host);
+  const uiDir = options.uiDir ?? env[UI_DIR_ENV]?.trim();
+  const app = createApp(host, uiDir ? { uiDir } : {});
   const port = resolvePort(env, options.port);
 
   // The port is only known once the socket is bound, which matters when it

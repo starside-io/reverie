@@ -13,7 +13,7 @@
 //                                                    yet: start the build in the background
 //                                                    and, at session-start only, say so.
 //                                                    Built: hand stdin to `reverie hook`.
-//   node scripts/plugin-bootstrap.mjs build          build now, in the foreground
+//   node scripts/plugin-bootstrap.mjs build          build now, in the foreground, UI included
 //
 // No dependencies of its own: it has to run before there are any. stdout is the
 // MCP protocol in `mcp` mode and the hook payload in `hook` mode, so every
@@ -28,8 +28,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const lockDir = join(root, ".plugin-build.lock");
 const logPath = join(root, ".plugin-build.log");
 
-/** What a plugin session needs: the MCP server, and the CLI for the hooks. There is no UI yet. */
-const OUTPUTS = ["packages/mini-host/dist/mcp.js", "apps/reverie/dist/cli.js"];
+/**
+ * What a plugin session needs: the MCP server, the CLI for the hooks, and the
+ * built UI that `reverie serve` hands out and /reverie:open opens. `pnpm
+ * build` builds all three; a checkout built before the UI existed is built
+ * again, once.
+ */
+const OUTPUTS = ["packages/mini-host/dist/mcp.js", "apps/reverie/dist/cli.js", "packages/ui/dist/index.html"];
 
 /** A build that has not finished in this long is taken to have died. */
 const STALE_LOCK_MS = 15 * 60_000;

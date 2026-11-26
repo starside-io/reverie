@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { storage, tools as coreTools } from "@reverie/core";
 import {
@@ -16,6 +17,7 @@ import {
   serveMiniHost,
   sessionFromEnvironment,
   startMiniHost,
+  UI_DIR_ENV,
   verifySnapshot,
   type MiniHost,
 } from "@reverie/mini-host";
@@ -41,9 +43,9 @@ import { readStdin, runHook } from "./hook.js";
 
 export const USAGE = `reverie <command>
 
-  serve [--port <n>]       Start the host: POST /rpc and /host, on 127.0.0.1
-                           only. One at a time: refuses while another host is
-                           running, and names it.
+  serve [--port <n>]       Start the host: the UI, POST /rpc and /host, on
+                           127.0.0.1 only. One at a time: refuses while
+                           another host is running, and names it.
   restart                  Stop the running host and start it the same way
                            again, on the code as it is now.
   mcp                      Start the stdio MCP server for an assistant.
@@ -209,12 +211,28 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   }
 }
 
+/**
+ * The built UI: REVERIE_UI_DIR when set, else beside this binary in a package
+ * (ui/), else the workspace's packages/ui/dist when run from a checkout. A
+ * missing build is not fatal: the tools answer over /rpc and MCP either way,
+ * and `/` says the UI is not built. Lifted from Fellowship's cli.ts.
+ */
+export function uiDir(env: NodeJS.ProcessEnv): string {
+  const override = env[UI_DIR_ENV]?.trim();
+  if (override) return override;
+  const here = dirname(fileURLToPath(import.meta.url));
+  const packaged = resolve(here, "..", "ui");
+  if (existsSync(join(packaged, "index.html"))) return packaged;
+  return resolve(here, "..", "..", "..", "packages", "ui", "dist");
+}
+
 async function serve(argv: string[], io: Io): Promise<number> {
   // No flag means the host decides: REVERIE_PORT, else the default.
   const port = portFrom(argv);
+  const ui = uiDir(io.env);
   let running: Awaited<ReturnType<typeof serveMiniHost>>;
   try {
-    running = await serveMiniHost({ env: io.env, ...(port === undefined ? {} : { port }) });
+    running = await serveMiniHost({ env: io.env, uiDir: ui, ...(port === undefined ? {} : { port }) });
   } catch (error) {
     if (error instanceof HostAlreadyRunning) {
       io.err(`${error.message}\n`);
@@ -228,6 +246,7 @@ async function serve(argv: string[], io: Io): Promise<number> {
       `  silo     ${running.host.siloPath}`,
       `  host.db  ${running.host.hostPath}`,
       `  tools    ${running.host.api.describe().length}`,
+      `  ui       ${existsSync(join(ui, "index.html")) ? join(ui, "index.html") : `not built (${ui})`}`,
       "",
       "Ctrl+C to stop.",
       "",

@@ -27,9 +27,12 @@ front desk lists occasion pending, occasions with no story yet and unresolved
 names. The three people events are handled when a host delivers them, and the
 assistant can report them through `memory_link_occasion` when the two run on
 separate hosts. Reverie never calls Fellowship and stores no score about a
-person. The shared kit with Fellowship is not extracted yet, and there is no
-UI (M6). The build spec is [`docs/SPEC.md`](docs/SPEC.md), milestones M0 to
-M9.
+person. The standalone UI (M6) is in `packages/ui` and the host serves it on
+the same 127.0.0.1 port: the library, a page per memory, review, the recall
+inspector, the timeline, tags and the front desk, all through `POST /rpc`
+and the host's review decision route.
+The shared kit with Fellowship is not extracted yet. The build spec is
+[`docs/SPEC.md`](docs/SPEC.md), milestones M0 to M9.
 
 ## What it does, once built
 
@@ -111,7 +114,7 @@ To list it in a marketplace file you already maintain, add this to its
 | `/reverie:forget <call number>` | Permanently forget one memory |
 | `/reverie:dream` | Consolidation pass: duplicates, contradictions, stale entries |
 | `/reverie:setup` | Sections, shelves, projects, and what to bring in |
-| `/reverie:open` | Start the host, or find the one running; the library UI arrives at M6 |
+| `/reverie:open [shelf or call number]` | Start the host, or find the one running, and open the library UI |
 | `skills/reverie` | The procedure, including when to call Fellowship |
 
 ## Layout
@@ -129,7 +132,9 @@ docs/SPEC.md           the build spec, M0 to M9
 
 `packages/core` holds the module: storage, domain, tools and gates.
 `packages/mini-host` is the host: ports, host.db, host.lock, `/rpc` and the
-stdio MCP server. `packages/connector-transcripts` reads a session transcript
+stdio MCP server, and serves the built UI. `packages/ui` is the UI, a React
+app that talks to the host through `POST /rpc` and imports no database.
+`packages/connector-transcripts` reads a session transcript
 off disk as turns, behind the host's `connectors` port. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
 `status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, and
 `hook` for the plugin hooks). Run
