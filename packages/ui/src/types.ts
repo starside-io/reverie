@@ -197,6 +197,8 @@ export interface FramedItem {
   source: { kind: string; label: string };
   score: number;
   id: string;
+  /** Rank in the full text search and in the vector search, 1 based; null when absent or not run. */
+  ranks?: { fts: number | null; vector: number | null };
 }
 
 export type RecallResult =

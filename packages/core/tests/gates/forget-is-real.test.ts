@@ -128,3 +128,45 @@ describe("forget is real", () => {
     expect(await siloText(host)).not.toContain(BODY);
   });
 });
+
+/**
+ * The same gate with vectors on (M8): a models port and an embedding model
+ * configured, so the write path computed the vector itself. After the forget
+ * no vector of it is left, the vector leg of recall cannot find it, and a
+ * re-embed of the library does not bring it back.
+ */
+describe("forget is real, with vectors on", () => {
+  let host: TestHost;
+  afterEach(async () => {
+    await host.close();
+  });
+
+  it("leaves no vector, gives no vector hit, and a re-embed never brings it back", async () => {
+    host = await gateHost({ models: true, config: { embedding: { model: "test-model", dim: 3 } } });
+    await remember(host, { shelf: "LIF/HOM", body: "The garden hose is coiled behind the shed." });
+    const made = await remember(host, { shelf: "LIF/HOM", title: "Ladder lent out", body: BODY, said: QUOTE });
+    expect(made.embedding).toEqual({ status: "written", model: "test-model" });
+    const before = await host.invoke<RecallResult>("memory.recall", { query: "ladder neighbours" });
+    expect(before.sufficient && before.retrieval.vectors).toBe(true);
+
+    await host.invoke("memory.forget", { call: made.memory.call, confirmedByUser: true });
+    expect(await host.db.embedding.count({ where: { memoryId: made.memory.id } })).toBe(0);
+    expect(await host.db.embedding.count()).toBe(1);
+
+    // The test port gives every text of the same length the same vector, so a
+    // query that long would rank the forgotten memory first if its row were left.
+    const probe = "x".repeat(embeddingTextLength(made.memory.title, BODY));
+    const after = await host.invoke<RecallResult>("memory.recall", { query: probe });
+    const ids = after.sufficient ? after.items.map((item) => item.id) : [];
+    expect(ids).not.toContain(made.memory.id);
+
+    const { runReembed } = await import("../../src/domain/embeddings.js");
+    await runReembed(host.db, (texts) => host.ports.models!.embed(texts), { model: "test-model-2", dim: 3 });
+    expect(await host.db.embedding.count({ where: { memoryId: made.memory.id } })).toBe(0);
+    expect(await host.db.memory.count({ where: { id: made.memory.id } })).toBe(0);
+  });
+});
+
+function embeddingTextLength(title: string, body: string): number {
+  return `${title}\n\n${body}`.length;
+}

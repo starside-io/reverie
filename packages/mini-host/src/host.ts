@@ -11,7 +11,8 @@ import type {
 } from "@reverie/core";
 
 import { openHostDb, resolveHostDbPath, type HostDb } from "./host-db.js";
-import { HostStore, createPorts } from "./ports/index.js";
+import type { EmbedderSettings } from "./models/index.js";
+import { HostStore, createPorts, type EmbeddingHook } from "./ports/index.js";
 
 /**
  * The mini-host itself: one process, two SQLite files, one module.
@@ -32,6 +33,12 @@ export interface MiniHost {
   emitter: EventEmitter;
   config(): ModuleConfig;
   /**
+   * The re-embed hook: `resume()` finishes a re-embed a previous process
+   * left half done, else fills the vectors the applied model is missing;
+   * `status()` says how the vectors stand. docs/SPEC.md section 17.
+   */
+  embedding: EmbeddingHook;
+  /**
    * Hands a listened event (docs/SPEC.md section 18) to the module, in this
    * process. It is recorded in the feed first, then delivered. There is no
    * cross-process delivery: a separately running Fellowship cannot reach
@@ -49,8 +56,14 @@ export interface MiniHostOptions {
   /** host.db. Defaults to beside the silo, or REVERIE_HOST_DB_PATH. */
   hostDbPath?: string;
   env?: NodeJS.ProcessEnv;
-  /** An embedding model. Absent by default: recall runs on FTS alone. */
+  /**
+   * An embedding model to use in place of the host's own (tests). Without
+   * one the host's models port follows embedding.model: null (the default)
+   * computes nothing and recall runs on FTS alone.
+   */
   models?: ModelsPort;
+  /** Where the host's endpoint embedders look. Defaults to REVERIE_EMBED_URL from env. */
+  embedders?: EmbedderSettings;
   /** False runs without the transcripts connector. On by default. */
   transcripts?: boolean;
 }
@@ -84,10 +97,11 @@ export async function startMiniHost(options: MiniHostOptions = {}): Promise<Mini
   }
   const store = new HostStore(host);
 
-  const { ports, emitter, readConfig } = createPorts({
+  const { ports, emitter, readConfig, embedding } = createPorts({
     silo,
     store,
     siloPath,
+    embedders: { env, ...options.embedders },
     ...(options.models ? { models: options.models } : {}),
     ...(options.transcripts === false ? { transcripts: false } : {}),
   });
@@ -101,6 +115,7 @@ export async function startMiniHost(options: MiniHostOptions = {}): Promise<Mini
     store,
     emitter,
     config: readConfig,
+    embedding,
     publish: async (name, payload) => {
       store.recordEvent(name, payload);
       return api.deliver(name, payload);

@@ -11,6 +11,7 @@ import type { MemoryKind, MemoryScope, TrustTier } from "../../schemas/enums.js"
 import { defineTool, ToolError } from "../registry.js";
 import { callSchema } from "../shared/inputs.js";
 import { limitSchema } from "../shared/read-entries.js";
+import { readLoggedScores, type LoggedRanks } from "../shared/recall-log.js";
 import { findByCall } from "../shared/views.js";
 
 export const explainInputSchema = z
@@ -43,6 +44,19 @@ export interface ExplainedRecall {
   items: ExplainedItem[];
   /** The asked memory's place in it, when a call was given. */
   match: { rank: number; score: number } | null;
+  /**
+   * Whether that recall's vector search ran. Null for a row logged before
+   * ranks were, which says nothing either way.
+   */
+  vectors: boolean | null;
+  /**
+   * Each item's rank in the FTS search and in the vector search, parallel to
+   * `items`, 1 based, null where it was absent from a list or the list did
+   * not run. Null for a row logged before ranks were.
+   */
+  ranks: LoggedRanks[] | null;
+  /** The asked memory's two ranks, when a call was given and the row holds them. */
+  matchRanks: LoggedRanks | null;
 }
 
 /**
@@ -86,7 +100,7 @@ export const tool = defineTool({
   title: "Explain a recall",
   kind: "read",
   summary:
-    "Why a memory was recalled, read from RecallLog: each recall that returned it, its rank and score, and the weights behind the score as they stand now. Or one recall by id, with everything it returned. Ids and numbers only, never the query.",
+    "Why a memory was recalled, read from RecallLog: each recall that returned it, its rank and score, its rank in the full text and the vector search, and the weights behind the score as they stand now. Or one recall by id, with everything it returned. Ids and numbers only, never the query.",
   input: explainInputSchema,
   async handler(ctx, input): Promise<ExplainResult> {
     const found = input.call ? await findByCall(ctx, input.call) : null;
@@ -116,7 +130,8 @@ export const tool = defineTool({
 
     const recalls = logs.map((log): ExplainedRecall => {
       const memoryIds = asArray(log.memoryIds, isString);
-      const scores = asArray(log.scores, isNumber);
+      const logged = readLoggedScores(memoryIds.length, asArray(log.scores, isNumber));
+      const scores = logged.scores;
       const items = memoryIds.map((memoryId, index) => ({
         rank: index + 1,
         memoryId,
@@ -132,6 +147,9 @@ export const tool = defineTool({
         budget: log.budget,
         items,
         match: hit ? { rank: hit.rank, score: hit.score } : null,
+        vectors: logged.vectors,
+        ranks: logged.ranks,
+        matchRanks: hit && logged.ranks ? (logged.ranks[hit.rank - 1] ?? null) : null,
       };
     });
 

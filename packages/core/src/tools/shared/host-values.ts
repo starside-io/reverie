@@ -27,6 +27,11 @@ import type { HostPorts, SettingsValuesPort } from "../../ports.js";
  *   people.occasionsPending        memory id to the occasion its confirmed
  *                                  proposal implied, until it is linked;
  *                                  front-desk.ts
+ *   embedding.reembed              written by the host, read by core: a
+ *                                  re-embed under way (section 17), with
+ *                                  the model and dim it is moving to. While
+ *                                  it is set recall runs on FTS alone and
+ *                                  says `reembedding`
  *
  * Every reader is lenient: a missing port or a value of the wrong shape reads
  * as unset, so a hand edited row never takes a tool down.
@@ -37,6 +42,7 @@ export const CONSOLIDATION_LAST_AT_KEY = "consolidation.lastAt";
 export const CONSOLIDATION_SESSIONS_KEY = "consolidation.sessionsSince";
 export const READY_FOR_EXTRACTION_KEY = "sessions.readyForExtraction";
 export const TRANSCRIPTS_KEY = "sessions.transcripts";
+export const REEMBED_KEY = "embedding.reembed";
 
 /** The longest transcript pointer kept. A path, not content. Starting value. */
 export const TRANSCRIPT_POINTER_MAX_LENGTH = 4096;
@@ -267,4 +273,28 @@ export async function clearReadyForExtraction(ports: HostPorts, sessionId: strin
     return { [READY_FOR_EXTRACTION_KEY]: ready.filter((id) => id !== sessionId), [TRANSCRIPTS_KEY]: pointers };
   });
   return was;
+}
+
+/** A re-embed under way, as the host records it while its settings hook runs. */
+export interface ReembedState {
+  /** The model and dim the hook is moving every vector to. */
+  model: string;
+  dim: number | null;
+  /** What config named when it started: still the applied value until the run completes. */
+  from: { model: string | null; dim: number | null };
+  startedAt: string;
+  /** Vectors written so far, and memories still to go, as of the last batch. Progress only: the silo is the truth. */
+  embedded?: number;
+  remaining?: number;
+  /** Why the last run stopped short, when it did. */
+  lastError?: string;
+}
+
+/** The re-embed under way, or null when none is or the host keeps no values. */
+export async function readReembed(ports: HostPorts): Promise<ReembedState | null> {
+  const values = valuesOf(ports);
+  if (!values) return null;
+  const value = (await values.get(REEMBED_KEY)) as Partial<ReembedState> | undefined | null;
+  if (!value || typeof value !== "object" || typeof value.model !== "string" || value.model.length === 0) return null;
+  return value as ReembedState;
 }

@@ -129,7 +129,76 @@ To list it in a marketplace file you already maintain, add this to its
 
 Every import takes a backup of the silo first, beside it in `backups/`.
 
-## Layout
+## Vectors, optional
+
+Recall searches twice when an embedding model is configured: full text (FTS5,
+BM25) and cosine over stored vectors, fused by rank. With no model it runs on
+full text alone, says so in every result's `retrieval` block, and nothing
+below runs. Off by default (`embedding.model: null`).
+
+Turn vectors on through the running host's config, which is the settings
+port, so the re-embed hook runs: every memory is embedded before the new model
+counts as applied, and until then recall stays on full text and says
+`reembedding`.
+
+```bash
+curl -s -X POST http://127.0.0.1:4329/host/config \
+  -H 'content-type: application/json' \
+  -d '{"embedding": {"model": "reverie-lexical-v1", "dim": null}}'
+```
+
+| `embedding.model` | What computes the vectors |
+| --- | --- |
+| `null` | Nothing. Full text only, and every stored vector is dropped. |
+| `reverie-lexical-v1` | The built-in embedder. Pure TypeScript, no network, no download, no weights; `dim` 16 to 4096, 512 when left null. |
+| `ollama/<model>` | An Ollama server on this machine (`/api/embed`), such as `ollama/nomic-embed-text`. |
+| `openai/<model>` | Any server on this machine that speaks the OpenAI embeddings shape (`/v1/embeddings`): llama.cpp, LM Studio, vLLM. |
+
+**What the built-in embedder is, and is not.** It hashes a text's words, word
+pairs, word prefixes and character trigrams into a fixed number of buckets and
+scales the result to unit length. Two texts are close when they share words or
+fragments of words ("garden" and "gardening"). It knows no synonyms and no
+meaning: "heating" is not near "boiler". It is a lexical baseline that lets
+the vector path, the re-embed hook and the evals run anywhere and give the
+same numbers on every machine. For recall that understands paraphrase, use a
+real local model.
+
+**Local endpoints only.** The endpoint is `REVERIE_EMBED_URL`, else
+`http://127.0.0.1:11434` for Ollama and `http://127.0.0.1:8080` for the OpenAI
+shape. It must be 127.0.0.1, localhost or ::1: any other host is refused before
+a request is made, redirects are not followed, and there are no API keys and no
+remote providers. Reverie declares `network: none`, and a memory never leaves
+the machine. Reverie downloads no model: pull one with your own tools first.
+
+A write never waits on the model for more than 5 seconds and never fails
+because of it: the memory commits, its vector is missing, and recall runs on
+full text until it is filled. `reverie reindex` fills missing vectors,
+refreshes stale ones and finishes a re-embed that a stopped host left half
+done; `reverie serve` does the same in the background when it starts.
+`reverie status` says which of these applies. Snapshots and the markdown
+mirror never carry vectors; a restored silo is re-embedded.
+
+## Recall evals
+
+`eval/corpus.json` is a fixture library of invented people and places (76
+memories, 57 questions) covering the five abilities LongMemEval names:
+extraction, multi-session reasoning, temporal reasoning, knowledge updates and
+abstention. `reverie eval` builds a throwaway silo from it in a temp folder,
+asks every question with full text alone and again with each embedder, and
+reports recall at 1, 3 and 5, MRR, and abstention precision and recall, per
+ability and overall. The live silo is never opened. Evals are scores, not
+gates: nothing fails on a number.
+
+```bash
+pnpm --filter reverie start eval --out "$PWD/eval"
+pnpm --filter reverie start eval --embedder reverie-lexical-v1 --embedder ollama/nomic-embed-text --out "$PWD/eval"
+```
+
+The first writes `eval/RESULTS.md` and `eval/results.json` for full text and
+the built-in embedder, with the corpus hash, model, dim and date. The second
+adds a column for a local Ollama model already pulled (`--endpoint <url>` when
+it is not on its default port).
+
 ## Layout
 
 ```
@@ -151,7 +220,7 @@ app that talks to the host through `POST /rpc` and imports no database.
 off disk as turns, behind the host's `connectors` port, and
 `packages/adapter-markdown` reads and writes the markdown mirror and reads a
 Claude Code memory directory, behind the same port. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
-`status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, and
+`status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, `eval`, and
 `hook` for the plugin hooks). Run
 `pnpm install`, `pnpm test`, `pnpm build`, `pnpm db:check`. The rest of
 `packages/` and `apps/` in the spec is not written yet.

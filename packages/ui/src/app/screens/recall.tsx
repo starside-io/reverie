@@ -47,6 +47,14 @@ export function relevanceOf(score: number, recency: number, importanceFactor: nu
 }
 
 /** The text an MCP client receives for this result: the JSON the stdio server writes. */
+/** Where an item placed in the two searches, in words: "text 2, vector 1". */
+export function searchRanks(ranks: { fts: number | null; vector: number | null } | undefined, vectors: boolean): string {
+  if (!ranks) return "";
+  const text = ranks.fts === null ? "text none" : `text ${ranks.fts}`;
+  if (!vectors) return text;
+  return `${text}, vector ${ranks.vector === null ? "none" : ranks.vector}`;
+}
+
 export function asHandedOver(result: RecallResult): string {
   return JSON.stringify(result, null, 2);
 }
@@ -60,6 +68,8 @@ export function RecallInspector() {
   const [error, setError] = useState<RpcError | undefined>(undefined);
   const [result, setResult] = useState<RecallResult | null>(null);
   const [numbers, setNumbers] = useState<Breakdown[]>([]);
+  // The search ranks show when the host reports them; an older host does not.
+  const showRanks = Boolean(result && result.sufficient && result.items.some((item) => item.ranks));
 
   const run = async () => {
     setBusy(true);
@@ -177,6 +187,7 @@ export function RecallInspector() {
                     <th className="px-3 py-2 font-medium">Rank</th>
                     <th className="px-3 py-2 font-medium">Call number</th>
                     <th className="px-3 py-2 font-medium">Score</th>
+                    {showRanks ? <th className="px-3 py-2 font-medium">Search rank</th> : null}
                     <th className="px-3 py-2 font-medium">Relevance</th>
                     <th className="px-3 py-2 font-medium">Recency</th>
                     <th className="px-3 py-2 font-medium">Importance</th>
@@ -195,6 +206,9 @@ export function RecallInspector() {
                           </a>
                         </td>
                         <td className="px-3 py-2 tabular-nums">{figure(row?.score ?? item.score)}</td>
+                        {showRanks ? (
+                          <td className="px-3 py-2 tabular-nums">{searchRanks(item.ranks, result.retrieval.vectors)}</td>
+                        ) : null}
                         <td className="px-3 py-2 tabular-nums">{figure(row?.relevance)}</td>
                         <td className="px-3 py-2 tabular-nums">
                           {figure(row?.recency)}

@@ -6,7 +6,7 @@ import { basename, dirname, join } from "node:path";
 
 import { createMarkdownConnector } from "@reverie/adapter-markdown";
 import { createTranscriptsConnector } from "@reverie/connector-transcripts";
-import { config as coreConfig, domain, storage, tools as coreTools } from "@reverie/core";
+import { config as coreConfig, storage, tools as coreTools } from "@reverie/core";
 import type {
   AuditPort,
   BusPort,
@@ -27,8 +27,11 @@ import type {
   StoragePort,
 } from "@reverie/core";
 
+import { createHostModels, resolveEmbedder, type EmbedderSettings } from "../models/index.js";
+import { createEmbeddingHook, injectedEmbedder, type EmbeddingHook } from "./embedding-hook.js";
 import { HostStore, type ProposalRow } from "./host-store.js";
 
+export * from "./embedding-hook.js";
 export * from "./host-store.js";
 
 const SETTINGS_KEY = "module.config";
@@ -39,11 +42,16 @@ export interface PortsOptions {
   /** In-process listeners for the bus. The feed reads host.db instead. */
   emitter?: EventEmitter;
   /**
-   * An embedding model, handed in by whoever starts the host. Absent by
-   * default: Reverie declares network none, so the mini-host opens no model
-   * endpoint of its own, and recall runs on FTS alone and says so.
+   * An embedding model, handed in by whoever starts the host (tests). It
+   * computes whatever model config names. Without one the host offers its
+   * own models port (models/index.ts): the built-in lexical embedder, or a
+   * local endpoint on loopback, chosen by embedding.model. Off by default
+   * either way: with embedding.model null nothing is computed and recall runs
+   * on FTS alone and says so.
    */
   models?: ModelsPort;
+  /** Where the host's own endpoint embedders look, and how long they wait. */
+  embedders?: EmbedderSettings;
   /**
    * The transcripts connector (docs/SPEC.md section 12), on by default.
    * False leaves the connectors port out, so extraction from a finished
@@ -69,14 +77,8 @@ export interface MiniHostPorts {
   emitter: EventEmitter;
   /** Reads the stored config without going through the port. */
   readConfig(): ModuleConfig;
-}
-
-/** Thrown by settings.set when a change cannot be applied as asked. */
-export class SettingsError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SettingsError";
-  }
+  /** The re-embed hook: settings changes, resume after a restart, and status. */
+  embedding: EmbeddingHook;
 }
 
 /**
@@ -87,11 +89,11 @@ export class SettingsError extends Error {
  * The two that carry a rule rather than a lookup:
  *
  * settings.set re-embeds every memory before a change to embedding.model
- * counts as applied (docs/SPEC.md section 17, the re-embed hook). Embedding
- * is a cache of body and model, so saving a new model without the re-embed
- * leaves every vector silently stale. With no models port there is nothing
- * to re-embed with, so naming a model is refused rather than stored as if it
- * applied.
+ * or dim counts as applied (docs/SPEC.md section 17, the re-embed hook; see
+ * embedding-hook.ts for how it tracks progress and resumes). Embedding is a
+ * cache of body and model, so saving a new model without the re-embed leaves
+ * every vector silently stale. A model this host has nothing to compute with
+ * is refused rather than stored as if it applied.
  *
  * privacy.redact is the identity function and stays that way, as in
  * Fellowship: a redactor that did nothing but look like protection would be
@@ -152,30 +154,21 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     remove: async (path) => store.removeLocalPath(coreTools.shared.normaliseFolder(path) ?? path),
   };
 
+  const models: ModelsPort = options.models ?? createHostModels(readConfig, options.embedders ?? {});
+  const injected = options.models;
+  const embedding = createEmbeddingHook({
+    silo,
+    store,
+    readConfig,
+    writeConfig: (config) => store.writeSetting(SETTINGS_KEY, config),
+    embedderFor: injected
+      ? injectedEmbedder(injected)
+      : (model, dim) => resolveEmbedder(model, dim, options.embedders ?? {}),
+  });
+
   const settings: SettingsPort = {
     get: async () => readConfig(),
-    set: async (patch) => {
-      const before = readConfig();
-      const next = coreConfig.mergeConfig(before, patch);
-
-      const model = next.embedding.model;
-      if (model !== null && model !== before.embedding.model) {
-        if (!options.models) {
-          throw new SettingsError(
-            `No embedding model is reachable from this host, so embedding.model "${model}" cannot be applied: nothing would compute its vectors. Recall stays on full text search.`,
-          );
-        }
-        // Before the new value counts as applied, not after.
-        const models = options.models;
-        await domain.embeddings.reembedAll(silo, (texts) => models.embed(texts), {
-          model,
-          dim: next.embedding.dim,
-        });
-      }
-
-      store.writeSetting(SETTINGS_KEY, next);
-      return next;
-    },
+    set: (patch) => embedding.set(patch),
     values,
     localPaths,
   };
@@ -268,11 +261,11 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     settings,
     refs,
     privacy,
-    ...(options.models ? { models: options.models } : {}),
+    models,
     ...(options.transcripts === false ? {} : { connectors }),
   };
 
-  return { ports, emitter, readConfig };
+  return { ports, emitter, readConfig, embedding };
 }
 
 /**

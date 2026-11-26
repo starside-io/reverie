@@ -1,29 +1,12 @@
 /**
- * Embedding vectors as the silo stores them, and the cosine recall ranks by.
- * docs/SPEC.md section 14, "Search twice".
+ * The cosine recall ranks by. docs/SPEC.md section 14, "Search twice".
  *
- * Encoding, starting value: `Embedding.vector` holds the vector as 32 bit
- * floats, little endian, `dim` of them, nothing else. domain/embeddings.ts
- * writes them, through encodeVector, so the two sides agree. A vector whose byte length does not match its dim decodes to
- * null and is skipped, never guessed at.
+ * The encoding (32 bit floats, little endian, `dim` of them) lives in
+ * storage/embeddings.ts and is re-exported here for the callers that read it
+ * from this file.
  */
 
-const BYTES_PER_FLOAT = 4;
-
-export function encodeVector(vector: readonly number[]): Uint8Array<ArrayBuffer> {
-  const bytes = new Uint8Array(new ArrayBuffer(vector.length * BYTES_PER_FLOAT));
-  const view = new DataView(bytes.buffer);
-  vector.forEach((value, index) => view.setFloat32(index * BYTES_PER_FLOAT, value, true));
-  return bytes;
-}
-
-export function decodeVector(bytes: Uint8Array, dim: number): number[] | null {
-  if (!Number.isInteger(dim) || dim <= 0 || bytes.byteLength !== dim * BYTES_PER_FLOAT) return null;
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const out: number[] = [];
-  for (let index = 0; index < dim; index += 1) out.push(view.getFloat32(index * BYTES_PER_FLOAT, true));
-  return out;
-}
+export { decodeVector, encodeVector } from "../../storage/embeddings.js";
 
 /** Cosine similarity, or null when the lengths differ or either vector is all zeros. */
 export function cosine(a: readonly number[], b: readonly number[]): number | null {

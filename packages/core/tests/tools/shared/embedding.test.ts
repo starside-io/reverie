@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { embeddingText, fillMissingEmbeddings, reembedAll } from "../../../src/domain/embeddings.js";
+import {
+  embeddingText,
+  fillMissingEmbeddings,
+  memoriesWithStaleEmbedding,
+  prepareVector,
+  reembedAll,
+  runReembed,
+} from "../../../src/domain/embeddings.js";
 import { decodeVector } from "../../../src/domain/queries/vectors.js";
 import type { ExportResult } from "../../../src/tools/read/export.js";
 import type { RecallResult } from "../../../src/tools/read/recall.js";
@@ -351,5 +358,97 @@ describe("re-embed and fill", () => {
     expect(rest.embedded).toEqual([ids[1]]);
     const none = await fillMissingEmbeddings(host.db, embed, { model: "test-model", dim: 3 });
     expect(none.embedded).toEqual([]);
+  });
+});
+
+describe("a slow or failing model, redaction, and a resumable re-embed", () => {
+  let host: TestHost;
+  afterEach(async () => {
+    await host.close();
+  });
+
+  const remember = (body: string) =>
+    host.invoke<RememberResult>("memory.remember", { kind: "fact", shelf: "LIF/HOM", body });
+
+  it("a model slower than the write's cap never holds up the write: it commits with no vector", async () => {
+    host = await testHost({ now: NOW, session: { id: "session-1" }, models: true, config: MODEL });
+    const slow = (texts: string[]) => new Promise<number[][]>((done) => setTimeout(() => done(texts.map(() => [1, 0, 0])), 500));
+    const prepared = await prepareVector(slow, { model: "test-model", dim: 3 }, "Sam Rivera keeps the tent.", { timeoutMs: 20 });
+    expect(prepared).toEqual({ status: "failed", model: "test-model", reason: "The model gave no vector within 20ms." });
+
+    host.ports.models = { embed: () => new Promise<number[][]>(() => undefined) };
+    const started = Date.now();
+    const result = await remember("John Doe has the camping stove.");
+    expect(Date.now() - started).toBeLessThan(15_000);
+    expect(result.embedding).toMatchObject({ status: "missing", model: "test-model" });
+    expect(await host.db.memory.count({ where: { id: result.memory.id } })).toBe(1);
+    expect(await host.db.embedding.count({ where: { memoryId: result.memory.id } })).toBe(0);
+  }, 20_000);
+
+  it("redact clears history and keeps the vector, which is of the body as it reads now", async () => {
+    host = await testHost({ now: NOW, session: { id: "session-1" }, models: true, config: MODEL });
+    const made = await remember("Jane Doe keeps the map in the glovebox.");
+    await host.invoke("memory.update", { call: made.memory.call, body: "Jane Doe keeps the map in the door pocket." });
+    const before = await host.db.embedding.findUniqueOrThrow({ where: { memoryId: made.memory.id } });
+    await host.invoke("memory.redact", { call: made.memory.call, confirmedByUser: true });
+    const after = await host.db.embedding.findUniqueOrThrow({ where: { memoryId: made.memory.id } });
+    expect(Buffer.from(after.vector).equals(Buffer.from(before.vector))).toBe(true);
+    expect(after.model).toBe(before.model);
+  });
+
+  it("runReembed resumes where an interrupted run stopped, and removes the old rows only once complete", async () => {
+    host = await testHost({ now: NOW, session: { id: "session-1" }, models: true, config: MODEL });
+    const ids: string[] = [];
+    for (const body of ["Sam Rivera keeps the tent.", "John Doe has the stove.", "Jane Doe packs the map.", "Tomas Berg lends the van."]) {
+      ids.push((await remember(body)).memory.id);
+    }
+    const target = { model: "test-model-2", dim: 3 };
+    let calls = 0;
+    const dies = async (texts: string[]) => {
+      calls += 1;
+      if (calls > 2) throw new Error("The process stopped.");
+      return texts.map(() => [0, 0, 1]);
+    };
+    const first = await runReembed(host.db, dies, target, { batchSize: 1 });
+    expect(first.complete).toBe(false);
+    expect(first.embedded).toBe(2);
+    expect(first.removed).toBe(0);
+    // Half done: two of the new model, two of the old, none deleted.
+    expect(await host.db.embedding.count({ where: { model: "test-model-2" } })).toBe(2);
+    expect(await host.db.embedding.count({ where: { model: "test-model" } })).toBe(2);
+
+    const seen: string[][] = [];
+    const works = async (texts: string[]) => {
+      seen.push(texts);
+      return texts.map(() => [0, 0, 1]);
+    };
+    const second = await runReembed(host.db, works, target, { batchSize: 1 });
+    expect(second).toMatchObject({ complete: true, embedded: 2, removed: 0, failed: [], dim: 3 });
+    // Only the two still to do went to the model.
+    expect(seen.flat()).toHaveLength(2);
+    expect(await host.db.embedding.count({ where: { model: "test-model-2" } })).toBe(4);
+    expect(await host.db.embedding.count({ where: { model: { not: "test-model-2" } } })).toBe(0);
+  });
+
+  it("a re-embed embeds superseded entries too, which asOf recalls, and skips retired ones", async () => {
+    host = await testHost({ now: NOW, session: { id: "session-1" }, models: true, config: MODEL });
+    const old = await remember("I live at 12 Birch Row in Elmwood.");
+    await host.invoke("memory.supersede", { call: old.memory.call, body: "I live at 7 Larkspur Lane in Millbrook." });
+    const gone = await remember("The window cleaner comes monthly.");
+    await host.invoke("memory.retire", { call: gone.memory.call });
+    const result = await runReembed(host.db, (texts) => host.ports.models!.embed(texts), { model: "test-model-2", dim: null });
+    expect(result.complete).toBe(true);
+    expect(result.embedded).toBe(2);
+    expect(await host.db.embedding.count({ where: { memoryId: old.memory.id, model: "test-model-2" } })).toBe(1);
+    expect(await host.db.embedding.count({ where: { memoryId: gone.memory.id, model: "test-model-2" } })).toBe(0);
+  });
+
+  it("finds a vector older than its memory's last edit as stale", async () => {
+    host = await testHost({ now: NOW, session: { id: "session-1" }, models: true, config: MODEL });
+    const made = await remember("Jane Doe keeps the map in the glovebox.");
+    expect(await memoriesWithStaleEmbedding(host.db, "test-model")).toEqual([]);
+    // A process that stopped between the commit and its vector write leaves this behind.
+    await host.db.embedding.update({ where: { memoryId: made.memory.id }, data: { createdAt: new Date("2000-01-01T00:00:00.000Z") } });
+    expect(await memoriesWithStaleEmbedding(host.db, "test-model")).toEqual([made.memory.id]);
   });
 });

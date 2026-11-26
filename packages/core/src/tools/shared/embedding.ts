@@ -19,7 +19,11 @@ import type { ToolContext } from "../registry.js";
  * With no models port, or no embedding.model in config, both are no-ops and
  * the tool's result carries no `embedding` field: nothing happens and nothing
  * fails. With both, the result carries `embedding`, which says `missing` with
- * the reason when the model failed. The memory is committed either way.
+ * the reason when the model failed or took longer than
+ * WRITE_EMBED_TIMEOUT_MS. The memory is committed either way, and the
+ * missing vector is filled later by `reverie reindex` or the host's re-embed
+ * hook. While a re-embed is under way the write still embeds with the model
+ * config names, the one applied; the re-embed's next pass replaces it.
  */
 
 /** The models port and the configured model, or null when vectors are off. */
@@ -47,6 +51,9 @@ export async function storeEmbedding(
   prepared: PreparedVector | null,
 ): Promise<EmbeddingOutcome | undefined> {
   if (!prepared) return undefined;
+  // Stamped with the wall clock, as Prisma stamps Memory.updatedAt, never with
+  // ctx.now: a vector older than its memory's last edit is how reindex finds
+  // a stale one.
   return storeVector(ctx.db, memoryId, prepared);
 }
 

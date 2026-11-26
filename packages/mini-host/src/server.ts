@@ -282,6 +282,23 @@ export async function serveMiniHost(options: ServeOptions = {}): Promise<Running
 
   const url = `http://${HOSTNAME}:${actual}`;
   const dropLock = () => releaseHostLock(lockPath);
+
+  // The re-embed hook's restart half (docs/SPEC.md section 17): a re-embed a
+  // previous process left half done is finished here, and vectors an earlier
+  // write could not compute are filled. In the background: the host answers
+  // at once, on FTS alone until it is done, and says so in every recall.
+  const embedding = host.embedding.resume().then(
+    (report) => {
+      if (report.ran !== "none" && (report.embedded > 0 || !report.complete)) {
+        process.stderr.write(
+          `Vectors: ${report.ran === "reembed" ? "finished the re-embed" : "filled"} with ${report.model}, ${report.embedded} written${report.complete ? "" : `, ${report.failed} still missing (${report.reason ?? "unknown reason"})`}.\n`,
+        );
+      }
+    },
+    (error: unknown) => {
+      process.stderr.write(`Vectors: ${error instanceof Error ? error.message : String(error)}\n`);
+    },
+  );
   if (locking) {
     updateHostLock(lockPath, { port: actual, url });
     // A process that exits without close() still drops its own lock.
@@ -296,6 +313,8 @@ export async function serveMiniHost(options: ServeOptions = {}): Promise<Running
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
       });
+      // A run still going is left: it resumes from the silo next time.
+      await Promise.race([embedding, new Promise((done) => setTimeout(done, 2000).unref())]);
       await host.close();
       if (locking) {
         releaseHostLock(lockPath);

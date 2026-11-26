@@ -1,0 +1,1502 @@
+{
+  "name": "reverie-recall-eval",
+  "version": 1,
+  "about": "Invented people and places only (Jane Doe, John Doe, Sam Rivera and friends, in Elmwood, Harborview, Millbrook and Kestrel Bay). Memories are written in order of occurredOn, each at noon of its own day; a memory with supersedes is written with memory.supersede. Recall runs at now. Expected answers are call numbers, which the runner checks against the numbers the silo issues.",
+  "now": "2026-11-20T12:00:00.000Z",
+  "abilities": [
+    "extraction",
+    "multi_session",
+    "temporal",
+    "knowledge_update",
+    "abstention"
+  ],
+  "memories": [
+    {
+      "key": "h_address_old",
+      "call": "LIF/HOM/2025-02-01/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2025-02-01",
+      "title": "Home on Birch Row",
+      "body": "I live at 12 Birch Row in Elmwood, on the top floor.",
+      "tags": [
+        "address"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "h_landlady",
+      "call": "LIF/HOM/2025-03-01/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2025-03-01",
+      "title": "Odile prefers letters",
+      "body": "Odile Marchetti is my landlady. She prefers a letter through the door over a phone call for anything about repairs.",
+      "tags": [
+        "landlady"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "p_jane_job_old",
+      "call": "LIF/GTH/2025-03-10/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-03-10",
+      "title": "Jane teaches geography",
+      "body": "Jane Doe teaches geography at Harborview Secondary School.",
+      "tags": [
+        "jane"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_spare_key",
+      "call": "LIF/HOM/2025-04-02/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2025-04-02",
+      "title": "Spare key in the ceramic frog",
+      "body": "The spare key to the flat is inside the hollow ceramic frog on the balcony, not under the mat.",
+      "tags": [
+        "keys"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "w_coffee_old",
+      "call": "LIF/HOM/2025-04-12/001",
+      "kind": "preference",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2025-04-12",
+      "title": "Flat white with oat milk",
+      "body": "I take my coffee as a flat white with oat milk.",
+      "tags": [
+        "coffee"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "h_bins",
+      "call": "LIF/HOM/2025-05-05/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2025-05-05",
+      "title": "Bin collection day",
+      "body": "Bin collection in Elmwood is on Thursdays. Recycling goes out on alternate weeks, starting with the first Thursday of the month.",
+      "tags": [
+        "chores"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "t_rail_pref",
+      "call": "LIF/TRV/2025-05-11/001",
+      "kind": "preference",
+      "shelf": "LIF/TRV",
+      "occurredOn": "2025-05-11",
+      "title": "Train for short journeys",
+      "body": "For trips under five hours I take the train rather than fly.",
+      "tags": [
+        "trains"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "p_sam_car_old",
+      "call": "LIF/GTH/2025-05-20/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-05-20",
+      "title": "Sam's red hatchback",
+      "body": "Sam Rivera drives a red Corvel hatchback, old enough that the passenger door only opens from inside.",
+      "tags": [
+        "sam"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "t_kettle",
+      "call": "LIF/TRV/2025-06-01/001",
+      "kind": "preference",
+      "shelf": "LIF/TRV",
+      "occurredOn": "2025-06-01",
+      "title": "Folding kettle on trips",
+      "body": "On trips I pack a folding kettle and loose leaf tea; hotel tea bags are not worth drinking.",
+      "tags": [
+        "packing"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "r_domain",
+      "call": "REF/ACC/2025-06-15/001",
+      "kind": "fact",
+      "shelf": "REF/ACC",
+      "occurredOn": "2025-06-15",
+      "title": "Band website domain",
+      "body": "The domain for the band website is registered with Portline, under my personal account.",
+      "tags": [
+        "band"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "g_jane_food",
+      "call": "LIF/GTH/2025-06-20/001",
+      "kind": "preference",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-06-20",
+      "title": "Jane and mushrooms",
+      "body": "Jane Doe does not eat mushrooms and asks for them to be left off every dish.",
+      "tags": [
+        "food"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "w_style",
+      "call": "CRF/WRT/2025-07-01/001",
+      "kind": "preference",
+      "shelf": "CRF/WRT",
+      "occurredOn": "2025-07-01",
+      "title": "Short sentences, British spelling",
+      "body": "In my writing I prefer short sentences and British spelling.",
+      "tags": [
+        "style"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "t_kestrel_trip",
+      "call": "LIF/TRV/2025-07-12/001",
+      "kind": "episode",
+      "shelf": "LIF/TRV",
+      "occurredOn": "2025-07-12",
+      "title": "Sea kayaking at Kestrel Bay",
+      "body": "Drove to Kestrel Bay with John Doe for a weekend of sea kayaking. We stayed at the Saltmarsh Inn, room 4, which looks out over the estuary.",
+      "tags": [
+        "kayaking"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_window",
+      "call": "LIF/HOM/2025-07-20/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2025-07-20",
+      "title": "Window cleaner schedule",
+      "body": "The window cleaner comes on the first Saturday of every month and leaves the ladder by the side gate.",
+      "tags": [
+        "chores"
+      ],
+      "importance": 1
+    },
+    {
+      "key": "k_editor",
+      "call": "CRF/TLG/2025-08-01/001",
+      "kind": "preference",
+      "shelf": "CRF/TLG",
+      "occurredOn": "2025-08-01",
+      "title": "Helix with a light theme",
+      "body": "I write code in Helix with a light theme; dark themes give me eye strain in daylight.",
+      "tags": [
+        "editor"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_bbq_tomas",
+      "call": "LIF/GTH/2025-08-23/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-08-23",
+      "title": "Street barbecue with Tomas",
+      "body": "Tomas Berg fired up his smoker for a street barbecue on our road in Elmwood. He smoked brisket for eleven hours and the whole block came.",
+      "tags": [
+        "neighbours"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "p_lena_gym_old",
+      "call": "LIF/GTH/2025-09-01/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-09-01",
+      "title": "Climbing at Brightwater",
+      "body": "Lena Ortiz and I climb at Brightwater climbing gym on Tuesday evenings.",
+      "tags": [
+        "climbing"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "p_felix_old",
+      "call": "LIF/GTH/2025-09-05/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-09-05",
+      "title": "Felix in year 3",
+      "body": "Felix Doe is in year 3 at Harborview Primary.",
+      "tags": [
+        "felix"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "g_noor_violin",
+      "call": "LIF/GTH/2025-09-15/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-09-15",
+      "title": "Noor's violin lessons",
+      "body": "Noor Rivera started violin lessons at the Fernhill music school with a teacher called Mrs Abbot.",
+      "tags": [
+        "noor"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "g_tomas_dog",
+      "call": "LIF/GTH/2025-09-20/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-09-20",
+      "title": "Tomas's whippet Pilot",
+      "body": "Tomas Berg has a grey whippet called Pilot who is afraid of bicycles.",
+      "tags": [
+        "neighbours"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "n_pro_old",
+      "call": "WRK/NST/2025-10-01/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2025-10-01",
+      "title": "Pro plan at 6 euros",
+      "body": "NightStash Pro costs 6 euros a month.",
+      "tags": [
+        "plans"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "t_larchmont",
+      "call": "LIF/TRV/2025-10-11/001",
+      "kind": "episode",
+      "shelf": "LIF/TRV",
+      "occurredOn": "2025-10-11",
+      "title": "Cabin at Larchmont Lake",
+      "body": "Rented a cabin at Larchmont Lake with Sam and Noor. Noor caught her first perch from the jetty.",
+      "tags": [
+        "fishing"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_john_hobby",
+      "call": "LIF/GTH/2025-10-25/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-10-25",
+      "title": "John restores dinghies",
+      "body": "John Doe restores old wooden sailing dinghies in a boathouse near Harborview harbour.",
+      "tags": [
+        "boats"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "g_halloween",
+      "call": "LIF/GTH/2025-10-31/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-10-31",
+      "title": "Felix the lighthouse",
+      "body": "Felix went trick or treating in Harborview dressed as a lighthouse. John built the costume from a lampshade.",
+      "tags": [
+        "felix"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "n_priya_old",
+      "call": "WRK/NST/2025-11-03/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2025-11-03",
+      "title": "Priya leads mobile",
+      "body": "Priya Nair leads the NightStash mobile app team.",
+      "tags": [
+        "team"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_sam_gifts",
+      "call": "LIF/GTH/2025-11-10/001",
+      "kind": "preference",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-11-10",
+      "title": "Gifts for Sam",
+      "body": "Sam Rivera likes gifts he can use outdoors; he has no shelf space for ornaments.",
+      "tags": [
+        "gifts"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "n_storage",
+      "call": "WRK/NST/2025-11-20/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2025-11-20",
+      "title": "NightStash storage",
+      "body": "NightStash stores its sync data in SQLite on the device and Postgres on the server.",
+      "tags": [
+        "architecture"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "r_recipe",
+      "call": "REF/LNK/2025-11-28/001",
+      "kind": "reference",
+      "shelf": "REF/LNK",
+      "occurredOn": "2025-11-28",
+      "title": "Tomas's brisket rub",
+      "body": "Tomas's brisket rub recipe is saved at recipes.example.org/tomas-brisket.",
+      "tags": [
+        "recipes"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "c_marcus_old",
+      "call": "WRK/CLI/2025-12-01/001",
+      "kind": "fact",
+      "shelf": "WRK/CLI",
+      "occurredOn": "2025-12-01",
+      "title": "Marcus wants weekly emails",
+      "body": "Marcus Hale at Brindle Foods wants weekly status reports by email on Mondays.",
+      "tags": [
+        "brindle"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "c_brindle",
+      "call": "WRK/CLI/2025-12-02/001",
+      "kind": "fact",
+      "shelf": "WRK/CLI",
+      "occurredOn": "2025-12-02",
+      "title": "Brindle contract",
+      "body": "Brindle Foods signed a six month contract for a stock tracking dashboard. Marcus Hale is the contact.",
+      "tags": [
+        "brindle"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_christmas25",
+      "call": "LIF/GTH/2025-12-24/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2025-12-24",
+      "title": "Christmas Eve, oven failed",
+      "body": "Hosted Christmas Eve at my flat in Elmwood. The oven quit halfway through roasting, so Jane, John and Sam ate takeaway pizza from Luigi's on the floor by the tree.",
+      "tags": [
+        "christmas",
+        "hosting"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_newyear26",
+      "call": "LIF/GTH/2026-01-01/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-01-01",
+      "title": "New year on the pier",
+      "body": "Rang in the new year on the pier at Kestrel Bay with Sam and Lena, watching the fireworks over the harbour wall.",
+      "tags": [
+        "new-year"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "n_outage",
+      "call": "WRK/NST/2026-01-14/001",
+      "kind": "episode",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-01-14",
+      "title": "Sync outage",
+      "body": "The NightStash sync outage lasted three hours: a certificate on the push gateway expired and nobody had renewed it.",
+      "tags": [
+        "incident"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "h_router",
+      "call": "LIF/HOM/2026-01-20/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-01-20",
+      "title": "Router in the hallway cupboard",
+      "body": "The router lives in the hallway cupboard. When the internet drops, unplug it for thirty seconds before calling the provider.",
+      "tags": [
+        "internet"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "g_ravi_meet",
+      "call": "LIF/GTH/2026-01-24/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-01-24",
+      "title": "Met Ravi at an open mic",
+      "body": "Met Ravi Kapoor at an open mic at the Saltmarsh Inn, and we talked about starting a band.",
+      "tags": [
+        "band"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "k_keyboard",
+      "call": "CRF/TLG/2026-01-30/001",
+      "kind": "fact",
+      "shelf": "CRF/TLG",
+      "occurredOn": "2026-01-30",
+      "title": "Split keyboard",
+      "body": "My keyboard is a split Kestrel 42 with brown switches, and the spare keycaps are in the desk drawer.",
+      "tags": [
+        "keyboard"
+      ],
+      "importance": 1
+    },
+    {
+      "key": "p_band_old",
+      "call": "LIF/GTH/2026-02-01/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-02-01",
+      "title": "The Night Owls",
+      "body": "Ravi Kapoor and I started a band called The Night Owls. We rehearse in his garage.",
+      "tags": [
+        "band"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_boiler",
+      "call": "LIF/HOM/2026-02-10/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-02-10",
+      "title": "Boiler reset button",
+      "body": "The boiler is a Vexa 24C. The reset button sits behind the white panel on its left side, and it needs holding for ten seconds.",
+      "tags": [
+        "boiler"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "n_aiko",
+      "call": "WRK/NST/2026-02-19/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-02-19",
+      "title": "Aiko and feedback",
+      "body": "Aiko Tanaka designed the NightStash onboarding screens. She wants feedback as annotated screenshots, not long messages.",
+      "tags": [
+        "design"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "r_mail",
+      "call": "REF/ACC/2026-02-25/001",
+      "kind": "fact",
+      "shelf": "REF/ACC",
+      "occurredOn": "2026-02-25",
+      "title": "Support inbox",
+      "body": "Work email for NightStash runs through Fastmail; the shared support inbox forwards to Priya and me.",
+      "tags": [
+        "email"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "p_sam_car_new",
+      "call": "LIF/GTH/2026-02-28/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-02-28",
+      "title": "Sam's cargo bike",
+      "body": "Sam Rivera sold the red hatchback and now cycles everywhere on a cargo bike with a seat for Noor.",
+      "tags": [
+        "sam"
+      ],
+      "importance": 2,
+      "supersedes": "LIF/GTH/2025-05-20/001"
+    },
+    {
+      "key": "n_release",
+      "call": "WRK/NST/2026-03-03/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-03-03",
+      "title": "Release day",
+      "body": "NightStash releases go out on Wednesdays after the 2pm stand-up, and not on Fridays.",
+      "tags": [
+        "releases"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "g_sam_bday",
+      "call": "LIF/GTH/2026-03-07/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-03-07",
+      "title": "Sam Rivera turned 40",
+      "body": "Sam Rivera turned 40. We rented the back room of the Copperpot cafe in Ashgrove, and Lena brought a cake shaped like a climbing hold.",
+      "tags": [
+        "birthday"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "n_aiko_tea",
+      "call": "WRK/NST/2026-03-11/001",
+      "kind": "preference",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-03-11",
+      "title": "Aiko's jasmine tea",
+      "body": "Aiko Tanaka drinks only jasmine tea at meetings.",
+      "tags": [
+        "design"
+      ],
+      "importance": 1
+    },
+    {
+      "key": "c_osprey",
+      "call": "WRK/CLI/2026-03-15/001",
+      "kind": "fact",
+      "shelf": "WRK/CLI",
+      "occurredOn": "2026-03-15",
+      "title": "Osprey wants two languages",
+      "body": "Osprey Lettings asked for their tenant portal in Dutch and English; the Dutch copy comes from their own translator.",
+      "tags": [
+        "osprey"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_bike",
+      "call": "LIF/HOM/2026-03-22/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-03-22",
+      "title": "Green Halvard tourer",
+      "body": "My bicycle is a green Halvard tourer, kept in the communal shed. Jane knows the lock combination.",
+      "tags": [
+        "bicycle"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "k_backup",
+      "call": "CRF/TLG/2026-03-30/001",
+      "kind": "fact",
+      "shelf": "CRF/TLG",
+      "occurredOn": "2026-03-30",
+      "title": "Nightly laptop backups",
+      "body": "Laptop backups run nightly to the grey external drive labelled ATLAS.",
+      "tags": [
+        "backups"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "n_pro_new",
+      "call": "WRK/NST/2026-04-01/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-04-01",
+      "title": "Pro plan at 8 euros",
+      "body": "NightStash Pro went up to 8 euros a month, with a yearly plan at 80 euros.",
+      "tags": [
+        "plans"
+      ],
+      "importance": 3,
+      "supersedes": "WRK/NST/2025-10-01/001"
+    },
+    {
+      "key": "f_local",
+      "call": "WRK/FLW/2026-04-09/001",
+      "kind": "fact",
+      "shelf": "WRK/FLW",
+      "occurredOn": "2026-04-09",
+      "title": "Fellowship stays local",
+      "body": "Fellowship stays a local app on port 4319. We decided against a hosted version.",
+      "tags": [
+        "decision"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "r_trailmap",
+      "call": "REF/LNK/2026-04-17/001",
+      "kind": "reference",
+      "shelf": "REF/LNK",
+      "occurredOn": "2026-04-17",
+      "title": "Pinecrest trail map",
+      "body": "The Pinecrest trail map with the fire tower shortcut is at trails.example.org/pinecrest.",
+      "tags": [
+        "hiking"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "t_pinecrest",
+      "call": "LIF/TRV/2026-04-18/001",
+      "kind": "episode",
+      "shelf": "LIF/TRV",
+      "occurredOn": "2026-04-18",
+      "title": "Pinecrest loop in hail",
+      "body": "Hiked the Pinecrest trail loop with Lena Ortiz, 14 kilometres. We turned back at the fire tower because of hail.",
+      "tags": [
+        "hiking"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_lena_move",
+      "call": "LIF/GTH/2026-04-25/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-04-25",
+      "title": "Lena lives in Millbrook",
+      "body": "Lena Ortiz moved from Ashgrove to Millbrook, ten minutes from me.",
+      "tags": [
+        "lena"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "p_lena_gym_new",
+      "call": "LIF/GTH/2026-05-05/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-05-05",
+      "title": "Bouldering at Granite Hall",
+      "body": "Lena Ortiz and I moved our climbing sessions to the Granite Hall bouldering wall in Millbrook, on Wednesday evenings.",
+      "tags": [
+        "climbing"
+      ],
+      "importance": 3,
+      "supersedes": "LIF/GTH/2025-09-01/001"
+    },
+    {
+      "key": "g_jane_housewarm",
+      "call": "LIF/GTH/2026-05-16/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-05-16",
+      "title": "Housewarming on Quillon Street",
+      "body": "Jane and John held a housewarming in their new place on Quillon Street in Harborview. Felix gave everyone a tour of his treehouse.",
+      "tags": [
+        "hosting"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "n_launch",
+      "call": "WRK/NST/2026-05-28/001",
+      "kind": "episode",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-05-28",
+      "title": "NightStash 2.0 launch",
+      "body": "Launched NightStash 2.0 with offline folders. Priya and I watched the signups chart from the Copperpot cafe.",
+      "tags": [
+        "launch"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "c_marcus_new",
+      "call": "WRK/CLI/2026-06-01/001",
+      "kind": "fact",
+      "shelf": "WRK/CLI",
+      "occurredOn": "2026-06-01",
+      "title": "Marcus wants calls",
+      "body": "Marcus Hale now wants a fortnightly video call instead of the weekly email report.",
+      "tags": [
+        "brindle"
+      ],
+      "importance": 3,
+      "supersedes": "WRK/CLI/2025-12-01/001"
+    },
+    {
+      "key": "w_blog",
+      "call": "CRF/WRT/2026-06-05/001",
+      "kind": "fact",
+      "shelf": "CRF/WRT",
+      "occurredOn": "2026-06-05",
+      "title": "Outage blog draft",
+      "body": "My blog draft about offline-first sync lives in the Drafts folder under the title Lessons from the Outage.",
+      "tags": [
+        "blog"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "h_movers",
+      "call": "LIF/HOM/2026-06-13/001",
+      "kind": "episode",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-06-13",
+      "title": "Packing for the move",
+      "body": "Packed the flat into forty boxes with Jane and Sam. The piano needed four people and a ramp.",
+      "tags": [
+        "moving"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_address_new",
+      "call": "LIF/HOM/2026-06-14/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-06-14",
+      "title": "Home on Larkspur Lane",
+      "body": "Moved to 7 Larkspur Lane in Millbrook. The flat is on the ground floor with a small garden.",
+      "tags": [
+        "address"
+      ],
+      "importance": 4,
+      "supersedes": "LIF/HOM/2025-02-01/001"
+    },
+    {
+      "key": "g_noor_recital",
+      "call": "LIF/GTH/2026-06-20/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-06-20",
+      "title": "Noor's first recital",
+      "body": "Noor Rivera played her first violin recital at the Fernhill music school. She performed a minuet and bowed twice.",
+      "tags": [
+        "noor"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_plants",
+      "call": "LIF/HOM/2026-07-01/001",
+      "kind": "fact",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-07-01",
+      "title": "Tomas waters the tomatoes",
+      "body": "Tomas Berg waters my tomato plants whenever I travel, and likes to be paid back in jars of chutney.",
+      "tags": [
+        "neighbours"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "p_band_new",
+      "call": "LIF/GTH/2026-07-01/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-07-01",
+      "title": "Renamed The Lanterns",
+      "body": "The band renamed itself The Lanterns after finding another group called The Night Owls.",
+      "tags": [
+        "band"
+      ],
+      "importance": 3,
+      "supersedes": "LIF/GTH/2026-02-01/001"
+    },
+    {
+      "key": "n_priya_new",
+      "call": "WRK/NST/2026-07-15/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-07-15",
+      "title": "Priya leads billing",
+      "body": "Priya Nair moved from the mobile team to lead NightStash billing and subscriptions.",
+      "tags": [
+        "team"
+      ],
+      "importance": 3,
+      "supersedes": "WRK/NST/2025-11-03/001"
+    },
+    {
+      "key": "g_john_boat",
+      "call": "LIF/GTH/2026-07-26/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-07-26",
+      "title": "Sailing the Merrow",
+      "body": "Went out with John Doe on the Merrow, the dinghy he finished restoring. We capsized once near the breakwater.",
+      "tags": [
+        "boats"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "t_vellmar",
+      "call": "LIF/TRV/2026-08-02/001",
+      "kind": "episode",
+      "shelf": "LIF/TRV",
+      "occurredOn": "2026-08-02",
+      "title": "Lantern festival in Vellmar",
+      "body": "Took the night train to Vellmar for the lantern festival with Jane. The paper lanterns were released at midnight over the river Tarn.",
+      "tags": [
+        "festival"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "h_garden",
+      "call": "LIF/HOM/2026-08-09/001",
+      "kind": "episode",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-08-09",
+      "title": "Raised beds in Millbrook",
+      "body": "Spent the afternoon building raised beds in the Millbrook garden with Tomas's old drill, then planted garlic and broad beans.",
+      "tags": [
+        "garden"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "c_marcus_lunch",
+      "call": "WRK/CLI/2026-08-12/001",
+      "kind": "episode",
+      "shelf": "WRK/CLI",
+      "occurredOn": "2026-08-12",
+      "title": "Lunch with Marcus",
+      "body": "Lunch with Marcus Hale in Millbrook: Brindle Foods wants to extend the dashboard to their two warehouses.",
+      "tags": [
+        "brindle"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "w_coffee_new",
+      "call": "LIF/HOM/2026-08-20/001",
+      "kind": "preference",
+      "shelf": "LIF/HOM",
+      "occurredOn": "2026-08-20",
+      "title": "Black filter coffee",
+      "body": "I switched to black filter coffee, with no milk at all.",
+      "tags": [
+        "coffee"
+      ],
+      "importance": 2,
+      "supersedes": "LIF/HOM/2025-04-12/001"
+    },
+    {
+      "key": "p_jane_job_new",
+      "call": "LIF/GTH/2026-09-01/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-09-01",
+      "title": "Jane runs the maritime museum",
+      "body": "Jane Doe left teaching and now runs the Harborview Maritime Museum as its director.",
+      "tags": [
+        "jane"
+      ],
+      "importance": 3,
+      "supersedes": "LIF/GTH/2025-03-10/001"
+    },
+    {
+      "key": "p_felix_new",
+      "call": "LIF/GTH/2026-09-04/001",
+      "kind": "fact",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-09-04",
+      "title": "Felix in year 4",
+      "body": "Felix Doe moved up to year 4 and joined the school chess club.",
+      "tags": [
+        "felix"
+      ],
+      "importance": 2,
+      "supersedes": "LIF/GTH/2025-09-05/001"
+    },
+    {
+      "key": "g_band_gig",
+      "call": "LIF/GTH/2026-09-12/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-09-12",
+      "title": "First gig at the Saltmarsh Inn",
+      "body": "Played our first gig as The Lanterns at the Saltmarsh Inn. Ravi broke a bass string in the second song and we finished the set with three strings.",
+      "tags": [
+        "band"
+      ],
+      "importance": 4
+    },
+    {
+      "key": "n_hire",
+      "call": "WRK/NST/2026-09-22/001",
+      "kind": "fact",
+      "shelf": "WRK/NST",
+      "occurredOn": "2026-09-22",
+      "title": "Dario joins backend",
+      "body": "Hired Dario Pellegrini as the second NightStash backend engineer. He starts on 2026-10-05.",
+      "tags": [
+        "team"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "g_dinner_priya",
+      "call": "LIF/GTH/2026-10-03/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-10-03",
+      "title": "Curry night at Priya's",
+      "body": "Priya Nair cooked a Kerala fish curry for the NightStash team at her flat, and Aiko brought mango lassi.",
+      "tags": [
+        "nightstash"
+      ],
+      "importance": 2
+    },
+    {
+      "key": "g_felix_chess",
+      "call": "LIF/GTH/2026-10-17/001",
+      "kind": "episode",
+      "shelf": "LIF/GTH",
+      "occurredOn": "2026-10-17",
+      "title": "Felix's first chess win",
+      "body": "Felix Doe won his first chess tournament at Harborview library, and Jane filmed the final move.",
+      "tags": [
+        "felix"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "c_osprey_workshop",
+      "call": "WRK/CLI/2026-10-21/001",
+      "kind": "episode",
+      "shelf": "WRK/CLI",
+      "occurredOn": "2026-10-21",
+      "title": "Osprey workshop",
+      "body": "Workshop at Osprey Lettings in Millbrook. They chose the teal colour scheme and dropped the chat widget.",
+      "tags": [
+        "osprey"
+      ],
+      "importance": 3
+    },
+    {
+      "key": "w_talk",
+      "call": "CRF/WRT/2026-11-02/001",
+      "kind": "fact",
+      "shelf": "CRF/WRT",
+      "occurredOn": "2026-11-02",
+      "title": "Meetup talk",
+      "body": "Accepted a talk slot at the Millbrook Developers Meetup on 2026-12-03 about local-first apps.",
+      "tags": [
+        "talks"
+      ],
+      "importance": 3
+    }
+  ],
+  "questions": [
+    {
+      "id": "e01",
+      "ability": "extraction",
+      "query": "where is the spare key hidden",
+      "expect": [
+        "LIF/HOM/2025-04-02/001"
+      ]
+    },
+    {
+      "id": "e02",
+      "ability": "extraction",
+      "query": "how do I restart the heating if it cuts out",
+      "expect": [
+        "LIF/HOM/2026-02-10/001"
+      ]
+    },
+    {
+      "id": "e03",
+      "ability": "extraction",
+      "query": "which day are the rubbish bins emptied",
+      "expect": [
+        "LIF/HOM/2025-05-05/001"
+      ]
+    },
+    {
+      "id": "e04",
+      "ability": "extraction",
+      "query": "how does Odile want to be contacted about fixing things",
+      "expect": [
+        "LIF/HOM/2025-03-01/001"
+      ]
+    },
+    {
+      "id": "e05",
+      "ability": "extraction",
+      "query": "who looks after my vegetables while I am away",
+      "expect": [
+        "LIF/HOM/2026-07-01/001"
+      ]
+    },
+    {
+      "id": "e06",
+      "ability": "extraction",
+      "query": "what is the name of Tomas's dog",
+      "expect": [
+        "LIF/GTH/2025-09-20/001"
+      ]
+    },
+    {
+      "id": "e07",
+      "ability": "extraction",
+      "query": "which editor and colour scheme do I program with",
+      "expect": [
+        "CRF/TLG/2025-08-01/001"
+      ]
+    },
+    {
+      "id": "e08",
+      "ability": "extraction",
+      "query": "where do my computer backups get copied",
+      "expect": [
+        "CRF/TLG/2026-03-30/001"
+      ]
+    },
+    {
+      "id": "e09",
+      "ability": "extraction",
+      "query": "what form should design comments for Aiko take",
+      "expect": [
+        "WRK/NST/2026-02-19/001"
+      ]
+    },
+    {
+      "id": "e10",
+      "ability": "extraction",
+      "query": "which database does the app keep on phones",
+      "expect": [
+        "WRK/NST/2025-11-20/001"
+      ]
+    },
+    {
+      "id": "e11",
+      "ability": "extraction",
+      "query": "who reads the customer help mailbox",
+      "expect": [
+        "REF/ACC/2026-02-25/001"
+      ]
+    },
+    {
+      "id": "e12",
+      "ability": "extraction",
+      "query": "what food does my sister refuse",
+      "expect": [
+        "LIF/GTH/2025-06-20/001"
+      ]
+    },
+    {
+      "id": "e13",
+      "ability": "extraction",
+      "query": "which registrar holds the band's web address",
+      "expect": [
+        "REF/ACC/2025-06-15/001"
+      ]
+    },
+    {
+      "id": "e14",
+      "ability": "extraction",
+      "query": "what does John work on in his boathouse",
+      "expect": [
+        "LIF/GTH/2025-10-25/001"
+      ]
+    },
+    {
+      "id": "e15",
+      "ability": "extraction",
+      "query": "what kind of present suits Sam",
+      "expect": [
+        "LIF/GTH/2025-11-10/001"
+      ]
+    },
+    {
+      "id": "e16",
+      "ability": "extraction",
+      "query": "how do I like to travel for short journeys",
+      "expect": [
+        "LIF/TRV/2025-05-11/001"
+      ]
+    },
+    {
+      "id": "m01",
+      "ability": "multi_session",
+      "query": "how have Noor's music studies gone",
+      "expect": [
+        "LIF/GTH/2025-09-15/001",
+        "LIF/GTH/2026-06-20/001"
+      ]
+    },
+    {
+      "id": "m02",
+      "ability": "multi_session",
+      "query": "everything about the Brindle Foods account",
+      "expect": [
+        "WRK/CLI/2025-12-02/001",
+        "WRK/CLI/2026-06-01/001",
+        "WRK/CLI/2026-08-12/001"
+      ]
+    },
+    {
+      "id": "m03",
+      "ability": "multi_session",
+      "query": "what do I know about the Saltmarsh Inn",
+      "expect": [
+        "LIF/TRV/2025-07-12/001",
+        "LIF/GTH/2026-09-12/001",
+        "LIF/GTH/2026-01-24/001"
+      ]
+    },
+    {
+      "id": "m04",
+      "ability": "multi_session",
+      "query": "how the band came together and how the first show went",
+      "expect": [
+        "LIF/GTH/2026-01-24/001",
+        "LIF/GTH/2026-09-12/001",
+        "LIF/GTH/2026-07-01/001"
+      ]
+    },
+    {
+      "id": "m05",
+      "ability": "multi_session",
+      "query": "outdoor adventures with Lena",
+      "expect": [
+        "LIF/TRV/2026-04-18/001",
+        "LIF/GTH/2026-01-01/001"
+      ]
+    },
+    {
+      "id": "m06",
+      "ability": "multi_session",
+      "query": "what Felix has been up to",
+      "expect": [
+        "LIF/GTH/2026-10-17/001",
+        "LIF/GTH/2026-09-04/001",
+        "LIF/GTH/2025-10-31/001"
+      ]
+    },
+    {
+      "id": "m07",
+      "ability": "multi_session",
+      "query": "the sync failure and what I wrote about it afterwards",
+      "expect": [
+        "WRK/NST/2026-01-14/001",
+        "CRF/WRT/2026-06-05/001"
+      ]
+    },
+    {
+      "id": "m08",
+      "ability": "multi_session",
+      "query": "John and his wooden boats",
+      "expect": [
+        "LIF/GTH/2025-10-25/001",
+        "LIF/GTH/2026-07-26/001"
+      ]
+    },
+    {
+      "id": "m09",
+      "ability": "multi_session",
+      "query": "how the move to Millbrook went",
+      "expect": [
+        "LIF/HOM/2026-06-13/001",
+        "LIF/HOM/2026-06-14/001",
+        "LIF/HOM/2026-08-09/001"
+      ]
+    },
+    {
+      "id": "m10",
+      "ability": "multi_session",
+      "query": "favours and food from Tomas",
+      "expect": [
+        "LIF/HOM/2026-07-01/001",
+        "LIF/GTH/2025-08-23/001",
+        "REF/LNK/2025-11-28/001"
+      ]
+    },
+    {
+      "id": "t01",
+      "ability": "temporal",
+      "query": "where did I live in summer 2025",
+      "expect": [
+        "LIF/HOM/2025-02-01/001"
+      ],
+      "asOf": "2025-07-01T12:00:00.000Z"
+    },
+    {
+      "id": "t02",
+      "ability": "temporal",
+      "query": "what was Jane's job at the start of 2026",
+      "expect": [
+        "LIF/GTH/2025-03-10/001"
+      ],
+      "asOf": "2026-01-15T12:00:00.000Z"
+    },
+    {
+      "id": "t03",
+      "ability": "temporal",
+      "query": "what was the band called when we started rehearsing",
+      "expect": [
+        "LIF/GTH/2026-02-01/001"
+      ],
+      "asOf": "2026-03-01T12:00:00.000Z"
+    },
+    {
+      "id": "t04",
+      "ability": "temporal",
+      "query": "what car did Sam drive in late 2025",
+      "expect": [
+        "LIF/GTH/2025-05-20/001"
+      ],
+      "asOf": "2025-12-01T12:00:00.000Z"
+    },
+    {
+      "id": "t05",
+      "ability": "temporal",
+      "query": "how much was NightStash Pro before the increase",
+      "expect": [
+        "WRK/NST/2025-10-01/001"
+      ],
+      "asOf": "2026-01-01T12:00:00.000Z"
+    },
+    {
+      "id": "t06",
+      "ability": "temporal",
+      "query": "what happened on the first day of 2026",
+      "expect": [
+        "LIF/GTH/2026-01-01/001"
+      ]
+    },
+    {
+      "id": "t07",
+      "ability": "temporal",
+      "query": "what went wrong at Christmas 2025",
+      "expect": [
+        "LIF/GTH/2025-12-24/001"
+      ]
+    },
+    {
+      "id": "t08",
+      "ability": "temporal",
+      "query": "when does the new backend engineer begin",
+      "expect": [
+        "WRK/NST/2026-09-22/001"
+      ]
+    },
+    {
+      "id": "t09",
+      "ability": "temporal",
+      "query": "what is booked for early December 2026",
+      "expect": [
+        "CRF/WRT/2026-11-02/001"
+      ]
+    },
+    {
+      "id": "t10",
+      "ability": "temporal",
+      "query": "where did Lena and I climb in autumn 2025",
+      "expect": [
+        "LIF/GTH/2025-09-01/001"
+      ],
+      "asOf": "2025-10-15T12:00:00.000Z"
+    },
+    {
+      "id": "k01",
+      "ability": "knowledge_update",
+      "query": "where do I live now",
+      "expect": [
+        "LIF/HOM/2026-06-14/001"
+      ],
+      "superseded": [
+        "LIF/HOM/2025-02-01/001"
+      ]
+    },
+    {
+      "id": "k02",
+      "ability": "knowledge_update",
+      "query": "what is Jane's job",
+      "expect": [
+        "LIF/GTH/2026-09-01/001"
+      ],
+      "superseded": [
+        "LIF/GTH/2025-03-10/001"
+      ]
+    },
+    {
+      "id": "k03",
+      "ability": "knowledge_update",
+      "query": "how does Sam get around town",
+      "expect": [
+        "LIF/GTH/2026-02-28/001"
+      ],
+      "superseded": [
+        "LIF/GTH/2025-05-20/001"
+      ]
+    },
+    {
+      "id": "k04",
+      "ability": "knowledge_update",
+      "query": "where do Lena and I go climbing",
+      "expect": [
+        "LIF/GTH/2026-05-05/001"
+      ],
+      "superseded": [
+        "LIF/GTH/2025-09-01/001"
+      ]
+    },
+    {
+      "id": "k05",
+      "ability": "knowledge_update",
+      "query": "what does Priya work on at NightStash",
+      "expect": [
+        "WRK/NST/2026-07-15/001"
+      ],
+      "superseded": [
+        "WRK/NST/2025-11-03/001"
+      ]
+    },
+    {
+      "id": "k06",
+      "ability": "knowledge_update",
+      "query": "how do I take my coffee",
+      "expect": [
+        "LIF/HOM/2026-08-20/001"
+      ],
+      "superseded": [
+        "LIF/HOM/2025-04-12/001"
+      ]
+    },
+    {
+      "id": "k07",
+      "ability": "knowledge_update",
+      "query": "what does a Pro subscription cost",
+      "expect": [
+        "WRK/NST/2026-04-01/001"
+      ],
+      "superseded": [
+        "WRK/NST/2025-10-01/001"
+      ]
+    },
+    {
+      "id": "k08",
+      "ability": "knowledge_update",
+      "query": "how does Marcus want project updates",
+      "expect": [
+        "WRK/CLI/2026-06-01/001"
+      ],
+      "superseded": [
+        "WRK/CLI/2025-12-01/001"
+      ]
+    },
+    {
+      "id": "k09",
+      "ability": "knowledge_update",
+      "query": "what is the band's name",
+      "expect": [
+        "LIF/GTH/2026-07-01/001"
+      ],
+      "superseded": [
+        "LIF/GTH/2026-02-01/001"
+      ]
+    },
+    {
+      "id": "k10",
+      "ability": "knowledge_update",
+      "query": "which school year is Felix in",
+      "expect": [
+        "LIF/GTH/2026-09-04/001"
+      ],
+      "superseded": [
+        "LIF/GTH/2025-09-05/001"
+      ]
+    },
+    {
+      "id": "a01",
+      "ability": "abstention",
+      "query": "which football team does Ravi support",
+      "abstain": true
+    },
+    {
+      "id": "a02",
+      "ability": "abstention",
+      "query": "when is Priya's wedding",
+      "abstain": true
+    },
+    {
+      "id": "a03",
+      "ability": "abstention",
+      "query": "what colour is John's car",
+      "abstain": true
+    },
+    {
+      "id": "a04",
+      "ability": "abstention",
+      "query": "the recipe for Jane's lemon tart",
+      "abstain": true
+    },
+    {
+      "id": "a05",
+      "ability": "abstention",
+      "query": "which airline did I fly to Vellmar with",
+      "abstain": true
+    },
+    {
+      "id": "a06",
+      "ability": "abstention",
+      "query": "how many cats does Odile have",
+      "abstain": true
+    },
+    {
+      "id": "a07",
+      "ability": "abstention",
+      "query": "what did Aiko say about the billing page redesign",
+      "abstain": true
+    },
+    {
+      "id": "a08",
+      "ability": "abstention",
+      "query": "where did Marcus go on holiday",
+      "abstain": true
+    },
+    {
+      "id": "a09",
+      "ability": "abstention",
+      "query": "what time does the Elmwood swimming pool open",
+      "abstain": true
+    },
+    {
+      "id": "a10",
+      "ability": "abstention",
+      "query": "who won the Millbrook quiz night",
+      "abstain": true
+    },
+    {
+      "id": "a11",
+      "ability": "abstention",
+      "query": "what was Felix's score in the maths test",
+      "abstain": true
+    }
+  ]
+}

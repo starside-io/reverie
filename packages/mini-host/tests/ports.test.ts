@@ -33,7 +33,9 @@ describe("the settings port", () => {
       expect(config.defaultShelf).toBe("DSK/RET");
       expect(config.embedding).toEqual({ model: null, dim: null });
       expect(config.incognito).toBe(false);
-      expect(host.ports.models).toBeUndefined();
+      // The host offers its own models port, which computes nothing until embedding.model names a model.
+      expect(host.ports.models).toBeDefined();
+      expect(await host.silo.embedding.count()).toBe(0);
     } finally {
       await host.close();
     }

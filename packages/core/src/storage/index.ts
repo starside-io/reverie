@@ -7,3 +7,4 @@ export * from "./pragmas.js";
 export * from "./enum-checks.js";
 export * from "./client.js";
 export * from "./check.js";
+export * from "./embeddings.js";

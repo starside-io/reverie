@@ -1,0 +1,1858 @@
+{
+  "corpus": {
+    "name": "reverie-recall-eval",
+    "version": 1,
+    "sha256": "c032b6c1ba65825a57909d58f770c76f576225138505f0e2b538c9d803f4568e",
+    "memories": 76,
+    "questions": 57,
+    "now": "2026-11-20T12:00:00.000Z"
+  },
+  "date": "2026-11-26",
+  "runs": [
+    {
+      "label": "FTS only",
+      "model": null,
+      "dim": null,
+      "vectorRecalls": {
+        "used": 0,
+        "answered": 56
+      },
+      "overall": {
+        "questions": 57,
+        "answerable": 46,
+        "recallAt": {
+          "1": 0.3804347826086957,
+          "3": 0.7246376811594202,
+          "5": 0.8260869565217391
+        },
+        "mrr": 0.6141304347826086,
+        "falseAbstentions": 1,
+        "shouldAbstain": 11,
+        "abstained": 1,
+        "abstentionPrecision": 0,
+        "abstentionRecall": 0,
+        "staleWins": 0
+      },
+      "byAbility": {
+        "extraction": {
+          "questions": 16,
+          "answerable": 16,
+          "recallAt": {
+            "1": 0.3125,
+            "3": 0.5625,
+            "5": 0.75
+          },
+          "mrr": 0.4635416666666667,
+          "falseAbstentions": 1,
+          "shouldAbstain": 0,
+          "abstained": 1,
+          "abstentionPrecision": 0,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "multi_session": {
+          "questions": 10,
+          "answerable": 10,
+          "recallAt": {
+            "1": 0.14999999999999997,
+            "3": 0.6333333333333333,
+            "5": 0.8
+          },
+          "mrr": 0.6666666666666667,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "temporal": {
+          "questions": 10,
+          "answerable": 10,
+          "recallAt": {
+            "1": 0.5,
+            "3": 0.9,
+            "5": 0.9
+          },
+          "mrr": 0.6833333333333333,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "knowledge_update": {
+          "questions": 10,
+          "answerable": 10,
+          "recallAt": {
+            "1": 0.6,
+            "3": 0.9,
+            "5": 0.9
+          },
+          "mrr": 0.7333333333333333,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "abstention": {
+          "questions": 11,
+          "answerable": 0,
+          "recallAt": {
+            "1": null,
+            "3": null,
+            "5": null
+          },
+          "mrr": null,
+          "falseAbstentions": 0,
+          "shouldAbstain": 11,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": 0,
+          "staleWins": 0
+        }
+      },
+      "outcomes": [
+        {
+          "id": "e01",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2025-04-02/001",
+            "CRF/TLG/2026-01-30/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e02",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/HOM/2025-05-05/001",
+            "LIF/TRV/2025-07-12/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e03",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-03-03/001",
+            "LIF/HOM/2025-05-05/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e04",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2025-06-20/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/HOM/2025-03-01/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e05",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-07-01/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/TRV/2025-07-12/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e06",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-07-01/001",
+            "REF/LNK/2025-11-28/001",
+            "LIF/GTH/2025-09-20/001",
+            "LIF/HOM/2026-08-09/001",
+            "LIF/GTH/2025-08-23/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e07",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-10-21/001",
+            "CRF/TLG/2025-08-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e08",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "CRF/TLG/2026-03-30/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e09",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-02-19/001",
+            "LIF/TRV/2025-05-11/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-03-11/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e10",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/FLW/2026-04-09/001",
+            "LIF/GTH/2025-06-20/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e11",
+          "ability": "extraction",
+          "sufficient": false,
+          "calls": [],
+          "vectors": null,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e12",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e13",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-06-14/001",
+            "LIF/GTH/2026-07-01/001",
+            "LIF/GTH/2026-09-12/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e14",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2025-10-25/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e15",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2026-02-28/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/GTH/2026-01-01/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-10-11/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "e16",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-07-01/001",
+            "CRF/WRT/2025-07-01/001",
+            "LIF/TRV/2025-05-11/001",
+            "LIF/GTH/2026-03-07/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m01",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-02-28/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/GTH/2025-09-15/001",
+            "LIF/TRV/2025-10-11/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m02",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/CLI/2026-06-01/001",
+            "WRK/CLI/2025-12-02/001",
+            "WRK/CLI/2026-08-12/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/HOM/2025-03-01/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m03",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-09-12/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/HOM/2025-03-01/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/TRV/2025-07-12/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m04",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-12/001",
+            "LIF/GTH/2026-07-01/001",
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-10-17/001",
+            "WRK/NST/2026-04-01/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/GTH/2026-07-26/001",
+            "REF/ACC/2025-06-15/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m05",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-05-05/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/TRV/2026-04-18/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/GTH/2026-01-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m06",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-10-17/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-09-04/001",
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-08-23/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m07",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "CRF/WRT/2026-06-05/001",
+            "WRK/NST/2025-11-20/001",
+            "LIF/HOM/2025-03-01/001",
+            "WRK/NST/2026-01-14/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m08",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2025-10-25/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m09",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/HOM/2026-06-14/001",
+            "WRK/CLI/2026-10-21/001",
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/GTH/2026-05-05/001",
+            "LIF/HOM/2026-06-13/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "m10",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-07-01/001",
+            "LIF/GTH/2025-06-20/001",
+            "REF/LNK/2025-11-28/001",
+            "LIF/GTH/2025-09-20/001",
+            "LIF/HOM/2026-08-09/001",
+            "LIF/GTH/2025-08-23/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t01",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2025-02-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t02",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2025-03-10/001",
+            "LIF/GTH/2025-12-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t03",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-02-01/001",
+            "LIF/GTH/2025-09-15/001",
+            "LIF/GTH/2025-09-20/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t04",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2025-05-20/001",
+            "LIF/TRV/2025-10-11/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t05",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2025-11-20/001",
+            "WRK/NST/2025-10-01/001",
+            "WRK/NST/2025-11-03/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t06",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/NST/2026-09-22/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-12/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/HOM/2025-05-05/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t07",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t08",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2026-01-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t09",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/NST/2026-09-22/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "t10",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-09-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k01",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-01/001",
+            "WRK/CLI/2026-06-01/001",
+            "LIF/GTH/2026-02-28/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k02",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-01/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2026-03-22/001",
+            "LIF/TRV/2026-08-02/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k03",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-02-28/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/GTH/2026-01-01/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-10-11/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k04",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-05-05/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/TRV/2026-04-18/001",
+            "LIF/GTH/2026-01-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k05",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-07-15/001",
+            "WRK/NST/2026-09-22/001",
+            "WRK/NST/2026-03-03/001",
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-04-01/001",
+            "WRK/NST/2026-02-19/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k06",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-08-20/001",
+            "LIF/TRV/2025-05-11/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k07",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2025-06-20/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k08",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-06-01/001",
+            "LIF/GTH/2025-06-20/001",
+            "WRK/CLI/2025-12-02/001",
+            "WRK/CLI/2026-08-12/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k09",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-07-01/001",
+            "LIF/GTH/2026-09-12/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "k10",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-04/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/GTH/2025-09-15/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2026-01-01/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a01",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-09-22/001",
+            "WRK/NST/2026-07-15/001",
+            "LIF/GTH/2026-09-12/001",
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-10-03/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a02",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-07-15/001",
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-05-28/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a03",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-10-21/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2025-10-25/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a04",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-01/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2026-03-22/001",
+            "REF/LNK/2025-11-28/001",
+            "LIF/TRV/2026-08-02/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-05-16/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a05",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/TRV/2025-05-11/001",
+            "LIF/TRV/2026-08-02/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a06",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2025-03-01/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a07",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/NST/2026-07-15/001",
+            "WRK/NST/2026-02-19/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-03-11/001",
+            "LIF/HOM/2025-03-01/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a08",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-03-03/001",
+            "WRK/CLI/2026-06-01/001",
+            "WRK/CLI/2025-12-02/001",
+            "WRK/CLI/2026-08-12/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a09",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2025-05-05/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/GTH/2025-08-23/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a10",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/HOM/2026-06-14/001",
+            "LIF/GTH/2026-07-01/001",
+            "WRK/CLI/2026-10-21/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/GTH/2026-10-03/001",
+            "LIF/GTH/2026-05-05/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        },
+        {
+          "id": "a11",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-04/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": false,
+          "ftsOnlyReason": "no_embedding_model"
+        }
+      ]
+    },
+    {
+      "label": "FTS + reverie-lexical-v1",
+      "model": "reverie-lexical-v1",
+      "dim": 512,
+      "vectorRecalls": {
+        "used": 57,
+        "answered": 57
+      },
+      "overall": {
+        "questions": 57,
+        "answerable": 46,
+        "recallAt": {
+          "1": 0.41666666666666663,
+          "3": 0.7681159420289854,
+          "5": 0.8188405797101449
+        },
+        "mrr": 0.6394927536231884,
+        "falseAbstentions": 0,
+        "shouldAbstain": 11,
+        "abstained": 0,
+        "abstentionPrecision": null,
+        "abstentionRecall": 0,
+        "staleWins": 0
+      },
+      "byAbility": {
+        "extraction": {
+          "questions": 16,
+          "answerable": 16,
+          "recallAt": {
+            "1": 0.3125,
+            "3": 0.6875,
+            "5": 0.75
+          },
+          "mrr": 0.4947916666666667,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "multi_session": {
+          "questions": 10,
+          "answerable": 10,
+          "recallAt": {
+            "1": 0.11666666666666665,
+            "3": 0.6333333333333333,
+            "5": 0.7666666666666666
+          },
+          "mrr": 0.6333333333333334,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "temporal": {
+          "questions": 10,
+          "answerable": 10,
+          "recallAt": {
+            "1": 0.5,
+            "3": 0.9,
+            "5": 0.9
+          },
+          "mrr": 0.6833333333333333,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "knowledge_update": {
+          "questions": 10,
+          "answerable": 10,
+          "recallAt": {
+            "1": 0.8,
+            "3": 0.9,
+            "5": 0.9
+          },
+          "mrr": 0.8333333333333333,
+          "falseAbstentions": 0,
+          "shouldAbstain": 0,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": null,
+          "staleWins": 0
+        },
+        "abstention": {
+          "questions": 11,
+          "answerable": 0,
+          "recallAt": {
+            "1": null,
+            "3": null,
+            "5": null
+          },
+          "mrr": null,
+          "falseAbstentions": 0,
+          "shouldAbstain": 11,
+          "abstained": 0,
+          "abstentionPrecision": null,
+          "abstentionRecall": 0,
+          "staleWins": 0
+        }
+      },
+      "outcomes": [
+        {
+          "id": "e01",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2025-04-02/001",
+            "CRF/TLG/2026-01-30/001",
+            "LIF/HOM/2026-06-14/001",
+            "WRK/CLI/2026-10-21/001",
+            "WRK/NST/2026-09-22/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e02",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/HOM/2025-05-05/001",
+            "LIF/TRV/2025-07-12/001",
+            "CRF/WRT/2025-07-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e03",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-03-03/001",
+            "LIF/HOM/2025-05-05/001",
+            "WRK/NST/2026-09-22/001",
+            "WRK/NST/2026-07-15/001",
+            "LIF/GTH/2026-05-05/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e04",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/HOM/2025-03-01/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/GTH/2026-09-12/001",
+            "LIF/GTH/2025-06-20/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e05",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-07-01/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/TRV/2025-07-12/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e06",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-07-01/001",
+            "REF/LNK/2025-11-28/001",
+            "LIF/GTH/2025-09-20/001",
+            "LIF/HOM/2026-08-09/001",
+            "LIF/GTH/2025-08-23/001",
+            "LIF/GTH/2026-10-17/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e07",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-10-21/001",
+            "CRF/TLG/2025-08-01/001",
+            "CRF/TLG/2026-03-30/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e08",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "CRF/TLG/2026-03-30/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2026-05-05/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e09",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-02-19/001",
+            "LIF/TRV/2025-05-11/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-03-11/001",
+            "LIF/GTH/2026-09-01/001",
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2026-10-17/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e10",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/FLW/2026-04-09/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-05-05/001",
+            "CRF/TLG/2025-08-01/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2025-06-20/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e11",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-06-01/001",
+            "LIF/GTH/2026-09-12/001",
+            "LIF/HOM/2026-02-10/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e12",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/HOM/2026-02-10/001",
+            "LIF/GTH/2026-05-05/001",
+            "LIF/GTH/2026-10-17/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e13",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-07-01/001",
+            "LIF/HOM/2026-06-14/001",
+            "LIF/GTH/2026-09-12/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/GTH/2026-10-17/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/HOM/2026-02-10/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e14",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2025-10-25/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "LIF/GTH/2025-10-31/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e15",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2026-02-28/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-10-11/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/HOM/2026-02-10/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "e16",
+          "ability": "extraction",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-07-01/001",
+            "CRF/WRT/2025-07-01/001",
+            "LIF/TRV/2025-05-11/001",
+            "LIF/GTH/2026-03-07/001",
+            "CRF/WRT/2026-11-02/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m01",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-02-28/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/GTH/2025-09-15/001",
+            "LIF/TRV/2025-10-11/001",
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-09-01/001",
+            "LIF/GTH/2026-10-17/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m02",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/CLI/2025-12-02/001",
+            "WRK/CLI/2026-08-12/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/HOM/2025-03-01/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001",
+            "WRK/CLI/2026-06-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m03",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-09-12/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/HOM/2025-03-01/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "CRF/TLG/2026-03-30/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m04",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/GTH/2026-07-01/001",
+            "LIF/GTH/2026-09-12/001",
+            "LIF/GTH/2026-10-17/001",
+            "WRK/NST/2026-04-01/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/GTH/2026-07-26/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m05",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-05-05/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/TRV/2026-04-18/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/GTH/2026-01-01/001",
+            "LIF/GTH/2025-11-10/001",
+            "WRK/NST/2026-02-19/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m06",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-04/001",
+            "WRK/NST/2026-03-03/001",
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-10-31/001",
+            "LIF/GTH/2025-08-23/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m07",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "CRF/WRT/2026-06-05/001",
+            "WRK/NST/2025-11-20/001",
+            "LIF/HOM/2025-03-01/001",
+            "WRK/NST/2026-01-14/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/HOM/2026-02-10/001",
+            "LIF/GTH/2026-07-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m08",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-10-25/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "LIF/GTH/2025-10-31/001",
+            "WRK/NST/2026-09-22/001",
+            "CRF/TLG/2025-08-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m09",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/HOM/2026-06-14/001",
+            "WRK/CLI/2026-10-21/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-05-05/001",
+            "LIF/GTH/2026-04-25/001",
+            "WRK/NST/2026-04-01/001",
+            "WRK/CLI/2026-08-12/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "m10",
+          "ability": "multi_session",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-07-01/001",
+            "LIF/GTH/2025-06-20/001",
+            "REF/LNK/2025-11-28/001",
+            "LIF/GTH/2025-09-20/001",
+            "LIF/HOM/2026-08-09/001",
+            "LIF/GTH/2025-08-23/001",
+            "LIF/GTH/2026-10-17/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t01",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2025-02-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t02",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2025-03-10/001",
+            "LIF/GTH/2025-12-24/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t03",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-02-01/001",
+            "LIF/GTH/2025-09-15/001",
+            "LIF/GTH/2025-09-20/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/HOM/2026-02-10/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t04",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2025-05-20/001",
+            "LIF/TRV/2025-10-11/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t05",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2025-11-20/001",
+            "WRK/NST/2025-10-01/001",
+            "WRK/NST/2025-11-03/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t06",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/NST/2026-09-22/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-12/001",
+            "CRF/WRT/2026-06-05/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/HOM/2025-05-05/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t07",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/GTH/2025-10-31/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2026-10-17/001",
+            "CRF/TLG/2026-03-30/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t08",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2026-01-01/001",
+            "LIF/HOM/2026-07-01/001",
+            "LIF/HOM/2026-02-10/001",
+            "LIF/GTH/2026-05-05/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t09",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/HOM/2026-07-01/001",
+            "LIF/GTH/2026-05-05/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "t10",
+          "ability": "temporal",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-09-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k01",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-01/001",
+            "WRK/CLI/2026-06-01/001",
+            "LIF/GTH/2026-02-28/001",
+            "LIF/GTH/2026-09-12/001",
+            "WRK/NST/2026-07-15/001",
+            "WRK/NST/2026-03-03/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k02",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-01/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2026-03-22/001",
+            "LIF/TRV/2026-08-02/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k03",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-11-10/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-02-28/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-10-11/001",
+            "LIF/HOM/2026-02-10/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k04",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-05-05/001",
+            "WRK/NST/2026-03-03/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/GTH/2026-03-07/001",
+            "LIF/TRV/2026-04-18/001",
+            "LIF/GTH/2026-01-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k05",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-07-15/001",
+            "WRK/NST/2026-09-22/001",
+            "WRK/NST/2026-03-03/001",
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-04-01/001",
+            "WRK/NST/2026-02-19/001",
+            "WRK/NST/2025-11-20/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k06",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2026-08-20/001",
+            "LIF/TRV/2025-05-11/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2026-09-12/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k07",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-04-01/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2026-06-14/001",
+            "LIF/HOM/2026-02-10/001",
+            "WRK/NST/2026-07-15/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k08",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-06-01/001",
+            "WRK/CLI/2026-08-12/001",
+            "WRK/CLI/2025-12-02/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-09-01/001",
+            "LIF/HOM/2026-07-01/001",
+            "WRK/CLI/2026-03-15/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k09",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-07-01/001",
+            "LIF/GTH/2026-09-12/001",
+            "REF/ACC/2025-06-15/001",
+            "LIF/GTH/2026-01-24/001",
+            "CRF/TLG/2026-03-30/001",
+            "CRF/WRT/2026-11-02/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "k10",
+          "ability": "knowledge_update",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-04/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2025-09-15/001",
+            "LIF/GTH/2026-06-20/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2026-01-01/001",
+            "LIF/GTH/2025-10-31/001",
+            "LIF/TRV/2025-05-11/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a01",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-09-12/001",
+            "REF/ACC/2026-02-25/001",
+            "WRK/NST/2026-07-15/001",
+            "LIF/GTH/2025-06-20/001",
+            "LIF/GTH/2026-10-03/001",
+            "LIF/GTH/2026-01-24/001",
+            "WRK/NST/2026-09-22/001",
+            "LIF/GTH/2026-09-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a02",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-07-15/001",
+            "REF/ACC/2026-02-25/001",
+            "LIF/GTH/2026-10-03/001",
+            "WRK/NST/2026-05-28/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a03",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-10-21/001",
+            "LIF/GTH/2026-07-26/001",
+            "LIF/GTH/2025-10-25/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/TRV/2025-07-12/001",
+            "LIF/GTH/2025-10-31/001",
+            "LIF/GTH/2026-10-17/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a04",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-01/001",
+            "LIF/GTH/2025-06-20/001",
+            "REF/LNK/2025-11-28/001",
+            "LIF/HOM/2026-03-22/001",
+            "LIF/TRV/2026-08-02/001",
+            "LIF/HOM/2026-06-13/001",
+            "LIF/GTH/2026-05-16/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a05",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/TRV/2026-08-02/001",
+            "LIF/HOM/2026-06-14/001",
+            "LIF/TRV/2025-05-11/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a06",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2025-06-20/001",
+            "LIF/HOM/2025-03-01/001",
+            "WRK/CLI/2026-06-01/001",
+            "LIF/GTH/2026-09-12/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a07",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/NST/2026-07-15/001",
+            "CRF/WRT/2026-11-02/001",
+            "WRK/NST/2026-02-19/001",
+            "CRF/WRT/2026-06-05/001",
+            "WRK/NST/2026-03-11/001",
+            "LIF/GTH/2026-10-03/001",
+            "LIF/HOM/2025-03-01/001",
+            "LIF/GTH/2026-01-24/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a08",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "WRK/CLI/2026-06-01/001",
+            "WRK/NST/2026-03-03/001",
+            "WRK/CLI/2025-12-02/001",
+            "WRK/CLI/2026-08-12/001",
+            "LIF/GTH/2026-09-01/001",
+            "WRK/NST/2026-09-22/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a09",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/HOM/2025-05-05/001",
+            "LIF/GTH/2025-12-24/001",
+            "LIF/GTH/2026-01-24/001",
+            "LIF/GTH/2025-08-23/001",
+            "CRF/TLG/2026-03-30/001",
+            "LIF/GTH/2025-06-20/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a10",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "CRF/WRT/2026-11-02/001",
+            "LIF/HOM/2026-06-14/001",
+            "WRK/CLI/2026-10-21/001",
+            "LIF/GTH/2026-05-05/001",
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-04-25/001",
+            "LIF/GTH/2026-07-01/001",
+            "LIF/GTH/2026-10-03/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        },
+        {
+          "id": "a11",
+          "ability": "abstention",
+          "sufficient": true,
+          "calls": [
+            "LIF/GTH/2026-10-17/001",
+            "LIF/GTH/2026-09-04/001",
+            "LIF/GTH/2026-05-16/001",
+            "LIF/GTH/2025-10-31/001",
+            "LIF/GTH/2026-09-01/001"
+          ],
+          "vectors": true,
+          "ftsOnlyReason": null
+        }
+      ]
+    }
+  ]
+}

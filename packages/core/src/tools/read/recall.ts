@@ -8,20 +8,29 @@ import { z } from "zod";
 
 import type { Prisma } from "../../../generated/prisma/index.js";
 import { atomic } from "../../domain/db.js";
-import { decodeVector, rankByCosine } from "../../domain/queries/vectors.js";
+import { withTimeout } from "../../domain/embeddings.js";
+import { rankByCosine } from "../../domain/queries/vectors.js";
 import { fuse } from "../../domain/recall/fuse.js";
 import { packAndFrame, RECALL_NOTICE, type FramedItem, type ScoredMemory } from "../../domain/recall/frame.js";
 import { scoreMemory } from "../../domain/recall/score.js";
 import { dateTimeSchema } from "../../schemas/common.js";
 import type { MemoryKind, MemoryState, SourceKind, TrustTier } from "../../schemas/enums.js";
+import { loadEmbeddings, missingEmbeddingWhere } from "../../storage/embeddings.js";
 import { searchMemoryFts, toNeighbourQuery } from "../../storage/search.js";
 import { defineTool, type ToolContext } from "../registry.js";
 import { callPrefixWhere, callQuerySchema, tagFilterSchema, tagWhere } from "../shared/read-entries.js";
+import { readReembed } from "../shared/host-values.js";
 import { scopeWhere, visibleScopes } from "../shared/read-scope.js";
 import { writeRecallLog } from "../shared/recall-log.js";
 
 /** How many FTS hits one recall reads before filtering. Starting value. */
 export const FTS_POOL = 200;
+
+/**
+ * How long recall waits for the query's vector before it answers on FTS
+ * alone and says `query_embed_failed`. Starting value.
+ */
+export const RECALL_EMBED_TIMEOUT_MS = 5000;
 
 export const recallInputSchema = z.object({
   /** What the task is about, in words. Never logged. */
@@ -46,21 +55,42 @@ export type RecallInput = z.input<typeof recallInputSchema>;
 export interface RecallRetrieval {
   vectors: boolean;
   /**
-   * Present when vectors did not run. `partial_embeddings`: some active
-   * memories this recall could return have no vector of the configured model
-   * yet (a re-embed under way, or an embed that failed), so ranking by vector
-   * would favour the part of the library that has one.
+   * Present when vectors did not run.
+   *
+   *   no_models_port      the host offers no models port
+   *   no_embedding_model  config names no embedding model
+   *   reembedding         the host's re-embed hook is moving every vector to
+   *                       a new model or dim, and has not finished
+   *   no_embeddings       no memory this recall could return has a vector of
+   *                       the configured model yet
+   *   partial_embeddings  some do and some do not (an embed that failed at
+   *                       write, a restore not filled yet), so ranking by
+   *                       vector would favour the part of the library that
+   *                       has one
+   *   query_embed_failed  the model failed or timed out on the query itself
    */
-  ftsOnlyReason?: "no_models_port" | "no_embedding_model" | "no_embeddings" | "partial_embeddings";
+  ftsOnlyReason?:
+    | "no_models_port"
+    | "no_embedding_model"
+    | "reembedding"
+    | "no_embeddings"
+    | "partial_embeddings"
+    | "query_embed_failed";
   /** With `partial_embeddings`: how many of those memories have no vector yet. */
   missingEmbeddings?: number;
+}
+
+/** Where an item placed in each search: 1 based, null when absent from that list or when the list did not run. */
+export interface RecallRanks {
+  fts: number | null;
+  vector: number | null;
 }
 
 export type RecallResult =
   | {
       sufficient: true;
       notice: typeof RECALL_NOTICE;
-      items: Array<FramedItem & { id: string }>;
+      items: Array<FramedItem & { id: string; ranks: RecallRanks }>;
       retrieval: RecallRetrieval;
       /**
        * The RecallLog row this call wrote, for memory.explain. Null while
@@ -129,38 +159,54 @@ async function vectorList(
   query: string,
   where: Prisma.MemoryWhereInput,
 ): Promise<{ list: string[] | null; retrieval: RecallRetrieval }> {
+  const ftsOnly = (
+    ftsOnlyReason: NonNullable<RecallRetrieval["ftsOnlyReason"]>,
+    missingEmbeddings?: number,
+  ): { list: null; retrieval: RecallRetrieval } => ({
+    list: null,
+    retrieval: { vectors: false, ftsOnlyReason, ...(missingEmbeddings === undefined ? {} : { missingEmbeddings }) },
+  });
   const models = ctx.ports.models;
-  if (!models) return { list: null, retrieval: { vectors: false, ftsOnlyReason: "no_models_port" } };
+  if (!models) return ftsOnly("no_models_port");
+  // Until the re-embed hook finishes, recall runs on FTS alone and says so
+  // (section 17): no ranking mixes the old model's vectors with the new. This
+  // holds when vectors are being turned on too, from no model to one.
+  if (await readReembed(ctx.ports)) return ftsOnly("reembedding");
   const model = ctx.config.embedding.model;
-  if (!model) return { list: null, retrieval: { vectors: false, ftsOnlyReason: "no_embedding_model" } };
+  if (!model) return ftsOnly("no_embedding_model");
 
-  const rows = await ctx.db.embedding.findMany({
-    where: { model, memory: where },
-    select: { memoryId: true, dim: true, vector: true },
-  });
-  const candidates = rows.flatMap((row) => {
-    const vector = decodeVector(row.vector, row.dim);
-    return vector ? [{ id: row.memoryId, vector }] : [];
-  });
-  if (candidates.length === 0) return { list: null, retrieval: { vectors: false, ftsOnlyReason: "no_embeddings" } };
+  const dim = ctx.config.embedding.dim;
+  const held = await ctx.db.embedding.count({ where: { model, ...(dim ? { dim } : {}), memory: where } });
+  if (held === 0) return ftsOnly("no_embeddings");
 
-  // Until every active candidate has a vector of this model (section 17: until
-  // the re-embed finishes), recall runs on FTS alone and says so.
-  const missing = await ctx.db.memory.count({
-    where: {
-      AND: [where, { state: "active" }, { OR: [{ embedding: null }, { embedding: { model: { not: model } } }] }],
-    },
-  });
-  if (missing > 0) {
-    return {
-      list: null,
-      retrieval: { vectors: false, ftsOnlyReason: "partial_embeddings", missingEmbeddings: missing },
-    };
+  // Every candidate needs a vector of this model and dim, or none is ranked by one.
+  const missing = await ctx.db.memory.count({ where: { AND: [where, missingEmbeddingWhere(model, dim)] } });
+  if (missing > 0) return ftsOnly("partial_embeddings", missing);
+
+  let embedded: unknown;
+  try {
+    [embedded] = await withTimeout(
+      Promise.resolve().then(() => models.embed([query])),
+      RECALL_EMBED_TIMEOUT_MS,
+      "The model gave no vector for the query in time.",
+    );
+  } catch {
+    return ftsOnly("query_embed_failed");
   }
+  if (
+    !Array.isArray(embedded) ||
+    embedded.length === 0 ||
+    (dim !== null && embedded.length !== dim) ||
+    !embedded.every((value) => typeof value === "number" && Number.isFinite(value))
+  ) {
+    return ftsOnly("query_embed_failed");
+  }
+  const queryVector = embedded as number[];
 
-  const [embedded] = await models.embed([query]);
-  if (!embedded) return { list: null, retrieval: { vectors: false, ftsOnlyReason: "no_embeddings" } };
-  return { list: rankByCosine(embedded, candidates), retrieval: { vectors: true } };
+  // Only vectors of the query's own length: a row of another dim is never compared.
+  const candidates = await loadEmbeddings(ctx.db, { model, dim: queryVector.length, memory: where });
+  if (candidates.length < held) return ftsOnly("partial_embeddings", held - candidates.length);
+  return { list: rankByCosine(queryVector, candidates), retrieval: { vectors: true } };
 }
 
 export const tool = defineTool({
@@ -203,6 +249,7 @@ export const tool = defineTool({
           });
     const byId = new Map(rows.map((row) => [row.id, row]));
     const candidates: Array<ScoredMemory & { id: string }> = [];
+    const ranksById = new Map<string, RecallRanks>();
     for (const hit of fused) {
       const row = byId.get(hit.id);
       if (!row) continue;
@@ -217,6 +264,7 @@ export const tool = defineTool({
         { now: ctx.now, halfLifeDays: ctx.config.halfLifeDays },
       );
       candidates.push({ ...frameMemory(row), score, id: row.id });
+      ranksById.set(row.id, { fts: hit.rankFts, vector: hit.rankVec });
     }
 
     const limits = {
@@ -226,10 +274,11 @@ export const tool = defineTool({
     };
     const { result, packed } = packAndFrame(candidates, limits, ctx.now);
     const idByCall = new Map(candidates.map((candidate) => [candidate.call, candidate.id]));
-    const returned = packed.items.map((entry) => ({
-      memoryId: idByCall.get(entry.framed.call) as string,
-      score: entry.score,
-    }));
+    const returned = packed.items.map((entry) => {
+      const memoryId = idByCall.get(entry.framed.call) as string;
+      const ranks = ranksById.get(memoryId);
+      return { memoryId, score: entry.score, rankFts: ranks?.fts ?? null, rankVec: ranks?.vector ?? null };
+    });
 
     // The one write a recall makes: its log row, and the recall bookkeeping
     // on what it returned. updatedAt is kept as it was: being recalled is not
@@ -241,6 +290,7 @@ export const tool = defineTool({
         scopeRef: scopes.logScope.scopeRef,
         items: returned,
         budget: limits.tokenBudget,
+        vectors: vectors.retrieval.vectors,
       });
       for (const item of returned) {
         const current = byId.get(item.memoryId);
@@ -257,7 +307,10 @@ export const tool = defineTool({
     return {
       sufficient: true,
       notice: RECALL_NOTICE,
-      items: result.items.map((item) => ({ ...item, id: idByCall.get(item.call) as string })),
+      items: result.items.map((item) => {
+        const id = idByCall.get(item.call) as string;
+        return { ...item, id, ranks: ranksById.get(id) ?? { fts: null, vector: null } };
+      }),
       retrieval: vectors.retrieval,
       recallId: log?.id ?? null,
     };
