@@ -17,8 +17,9 @@ import type { HostDb } from "../host-db.js";
  * standalone UI will need over them. Nothing here is in the silo. Lifted
  * from Fellowship's host-store.ts: the proposal row names a memory instead of
  * a person, the audit row carries ids instead of a person id, the connector
- * cursors are gone (Reverie has no connector here yet), and the settings
- * values and the project folder paths are added.
+ * cursors are gone (the transcripts connector keeps none: core names the
+ * page it wants), and the settings values and the project folder paths are
+ * added.
  */
 
 export interface ProposalRow {
@@ -48,6 +49,14 @@ export interface EventRow {
   payload: unknown;
   at: string;
 }
+
+/**
+ * How long a claim on a proposal holds before another process may take it
+ * over: longer than any one decision takes (the transaction timeout is a
+ * minute), short enough that a process that died does not block the
+ * proposal for long. Starting value.
+ */
+export const CLAIM_LAPSE_MS = 5 * 60_000;
 
 function parseJson(value: unknown): unknown {
   if (typeof value !== "string") return null;
@@ -127,7 +136,43 @@ export class HostStore {
         `UPDATE "proposal" SET "state" = ?, "decidedAt" = ? WHERE "id" = ? AND "state" = 'pending'`,
       )
       .run(state, at.toISOString(), id);
+    // A decided proposal needs no claim: whoever held it is done with it.
+    this.host.db.prepare(`DELETE FROM "proposal_claim" WHERE "id" = ?`).run(id);
     return Number(result.changes) > 0;
+  }
+
+  /**
+   * Takes a pending proposal for this process to decide. Several processes
+   * share this queue (one MCP server per session, a serve beside them), and
+   * without a claim two of them can both read a proposal as pending and both
+   * run its write. The claim is a row in proposal_claim, taken under the
+   * write lock, and only while the proposal is pending; a claim older than
+   * CLAIM_LAPSE_MS was left by a process that died mid decision and is taken
+   * over. False when the proposal is not pending or another holder has it.
+   */
+  claimProposal(id: string, holder: string, at: Date = new Date()): boolean {
+    return this.immediate(() => {
+      const row = this.host.db.prepare(`SELECT "state" FROM "proposal" WHERE "id" = ?`).get(id) as
+        | Record<string, unknown>
+        | undefined;
+      if (!row || row["state"] !== "pending") return false;
+      const held = this.host.db
+        .prepare(`SELECT "holder", "claimedAt" FROM "proposal_claim" WHERE "id" = ?`)
+        .get(id) as Record<string, unknown> | undefined;
+      if (held && at.getTime() - Date.parse(String(held["claimedAt"])) < CLAIM_LAPSE_MS) return false;
+      this.host.db
+        .prepare(
+          `INSERT INTO "proposal_claim" ("id", "holder", "claimedAt") VALUES (?, ?, ?)
+           ON CONFLICT ("id") DO UPDATE SET "holder" = excluded."holder", "claimedAt" = excluded."claimedAt"`,
+        )
+        .run(id, holder, at.toISOString());
+      return true;
+    });
+  }
+
+  /** Drops this holder's claim on a proposal. Someone else's is left alone. */
+  releaseProposal(id: string, holder: string): void {
+    this.host.db.prepare(`DELETE FROM "proposal_claim" WHERE "id" = ? AND "holder" = ?`).run(id, holder);
   }
 
   /**
@@ -201,6 +246,43 @@ export class HostStore {
 
   writeValue(key: string, value: unknown, at: Date = new Date()): void {
     this.write("value", key, value, at);
+  }
+
+  /**
+   * Reads `keys`, hands them to `change`, writes what it returns, all under
+   * one write lock, so a list two processes append to at once keeps both
+   * entries (SettingsValuesPort.update). Returns the values as they stand
+   * after.
+   */
+  updateValues(
+    keys: readonly string[],
+    change: (current: Record<string, unknown>) => Record<string, unknown>,
+    at: Date = new Date(),
+  ): Record<string, unknown> {
+    return this.immediate(() => {
+      const current: Record<string, unknown> = {};
+      for (const key of keys) current[key] = this.read("value", key);
+      const next = change(current);
+      for (const [key, value] of Object.entries(next)) this.write("value", key, value, at);
+      return { ...current, ...next };
+    });
+  }
+
+  /**
+   * Runs `work` inside BEGIN IMMEDIATE: the write lock is taken before
+   * anything is read, so what is read cannot change before it is written
+   * back. busy_timeout covers the wait for another process's lock.
+   */
+  private immediate<T>(work: () => T): T {
+    this.host.db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = work();
+      this.host.db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      if (this.host.db.isTransaction) this.host.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   listLocalPaths(project?: string): LocalPath[] {

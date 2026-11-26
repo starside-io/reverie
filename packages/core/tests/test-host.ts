@@ -3,6 +3,7 @@ import { DEFAULT_CONFIG, mergeConfig, type ConfigPatch, type ModuleConfig } from
 import { seedLibrary } from "../src/domain/catalogue/shelving.js";
 import type {
   AuditEntry,
+  ConnectorsPort,
   HostPorts,
   LocalPath,
   ModuleEventName,
@@ -53,6 +54,8 @@ export interface TestHostOptions {
   noLocalPaths?: boolean;
   /** Leave settings.values out, as a host that keeps no settings values would. */
   noValues?: boolean;
+  /** A connectors port of the test's own, such as a transcripts double. */
+  connectors?: ConnectorsPort;
 }
 
 export interface TestHost {
@@ -220,6 +223,7 @@ export async function testHost(options: TestHostOptions = {}): Promise<TestHost>
           },
         }
       : {}),
+    ...(options.connectors ? { connectors: options.connectors } : {}),
     ...(options.optionalPorts
       ? {
           connectors: { pull: async () => ({ items: [], cursor: null }) },

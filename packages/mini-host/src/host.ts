@@ -51,6 +51,8 @@ export interface MiniHostOptions {
   env?: NodeJS.ProcessEnv;
   /** An embedding model. Absent by default: recall runs on FTS alone. */
   models?: ModelsPort;
+  /** False runs without the transcripts connector. On by default. */
+  transcripts?: boolean;
 }
 
 export async function startMiniHost(options: MiniHostOptions = {}): Promise<MiniHost> {
@@ -86,6 +88,7 @@ export async function startMiniHost(options: MiniHostOptions = {}): Promise<Mini
     silo,
     store,
     ...(options.models ? { models: options.models } : {}),
+    ...(options.transcripts === false ? { transcripts: false } : {}),
   });
   const api = activate(ports);
 

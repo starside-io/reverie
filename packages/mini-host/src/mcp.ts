@@ -166,10 +166,17 @@ export interface StdioOptions extends MiniHostOptions, McpServerOptions {}
 /**
  * Opens the files, attaches to stdio, and stays up until the pipe closes.
  *
- * Like Fellowship's, this takes no host.lock and does not look at one: an
- * assistant's MCP server runs beside a `reverie serve` over the same files,
- * and beside other sessions' servers. SQLite's WAL and busy_timeout serialize
- * their writes at the file. See host-lock.ts.
+ * Decided: this takes no host.lock and does not look at one, and it opens the
+ * files directly rather than proxying to a running serve. Claude Code starts
+ * one of these per session, beside other sessions' servers and beside a
+ * `reverie serve`, all over the same two files. What makes that safe, and is
+ * proved by tests/concurrency.test.ts with several real processes writing at
+ * once: SQLite's WAL with busy_timeout set before anything else on every
+ * connection; every silo transaction opened with BEGIN IMMEDIATE (Prisma's
+ * own) and run again when it still finds the file busy (core's atomic);
+ * host.db values that several sessions append to updated under one write
+ * lock (SettingsValuesPort.update); and a proposal claimed before it is
+ * decided (ReviewPort.claim), so its write runs once. See host-lock.ts.
  */
 export async function runStdioServer(options: StdioOptions = {}): Promise<void> {
   const host = await startMiniHost(options);

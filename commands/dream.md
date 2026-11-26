@@ -1,13 +1,14 @@
 ---
-description: Run a consolidation pass over Reverie and queue what it proposes
-argument-hint: [shelf, or a date range, to limit the pass]
+description: Draft memories from finished sessions, run a consolidation pass over Reverie, and queue what both propose
+argument-hint: [shelf, or a date range, to limit the consolidation pass]
 allowed-tools:
   - Read
 ---
 
-Consolidate Reverie: find duplicates, contradictions and stale entries, and
-propose what to do about each. Limited to the shelf or the dates in
-`$ARGUMENTS` when given.
+Two passes over Reverie. First, draft the memories worth keeping from every
+finished session still waiting for extraction. Then consolidate: find
+duplicates, contradictions and stale entries, and propose what to do about
+each, limited to the shelf or the dates in `$ARGUMENTS` when given.
 
 ## If the tools are missing
 
@@ -16,7 +17,31 @@ are not available in this session: say so in one line and stop. Do not write
 the memory to a file, a note, or anywhere else instead. A memory kept somewhere
 Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 
-## What this command does
+## Extraction: what finished sessions left behind
+
+A session that ended is marked ready for extraction, with a pointer to its
+transcript. Its session notes and its transcript turns are what to draft from.
+
+1. `memory_draft_context { job: "extract" }`, with no material and no
+   session, lists the sessions waiting: each with its id, how many session
+   notes it holds, and whether a transcript is there. An empty list means
+   there is nothing to extract: go on to consolidation.
+2. For each one, `memory_draft_context { job: "extract", session: "<id>" }`.
+   It hands over the session's notes (marked `note`, the assistant's words,
+   not the owner's) and its transcript turns, a page at a time. `session.notice`
+   says what the page holds, and says so when there is no transcript and the
+   notes are all there is.
+3. Draft the memories worth keeping from that page, each with a quote copied
+   exactly from it, and hand the answer to `memory_propose_draft` with the
+   `target` exactly as returned. A quote that is not on that page is refused.
+4. When the answer to step 2 carried a `continuation`, call
+   `memory_draft_context` with it for the next page and repeat step 3. The
+   session stops waiting once its last page is proposed. If every candidate
+   of the last page was refused, it keeps waiting: fix the draft and propose
+   again. A page with nothing worth keeping is proposed with no candidates.
+5. Nothing is read while incognito is on. Say so and skip this part.
+
+## Consolidation
 
 1. `memory_draft_context { job: "consolidate" }` for the material, the rules
    and the schema. To limit the pass, add `shelf` (`WRK/NST`), `from` and
@@ -29,10 +54,12 @@ Reverie cannot see is a memory that is never recalled, reviewed or forgotten.
 3. Hand the answer to `memory_propose_draft` with the `target` exactly as
    `memory_draft_context` returned it. It is validated and queued; each
    refused action comes back with its reason.
-4. Report what was queued and point the owner at `/reverie:review`.
+4. Report what both passes queued and point the owner at `/reverie:review`.
 
 ## Rules
 
+- **Both passes propose. Neither applies.** What is drafted from a session
+  waits in review like anything else a model concludes.
 - **Consolidation proposes. It never applies.** Nothing changes until the
   owner decides in review. A pass that rewrites what is known unseen is how
   trust in a memory ends.

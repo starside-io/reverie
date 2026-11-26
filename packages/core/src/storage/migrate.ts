@@ -85,8 +85,12 @@ export function migrateSilo(
   const db = new DatabaseSync(path);
 
   try {
-    db.exec("PRAGMA journal_mode = WAL");
+    // busy_timeout first: several processes open the same file at once (one
+    // MCP server per session, a serve beside them), and the journal mode
+    // statement takes a lock that would otherwise fail at once rather than
+    // wait for the process holding it.
     db.exec("PRAGMA busy_timeout = 5000");
+    db.exec("PRAGMA journal_mode = WAL");
     // Off while the schema is built: the statements create tables that
     // reference tables created further down the same script.
     db.exec("PRAGMA foreign_keys = OFF");
@@ -116,7 +120,19 @@ export function migrateSilo(
       }
 
       const startedAt = new Date().toISOString();
-      db.exec("BEGIN");
+      // IMMEDIATE takes the write lock before anything is read, and the row
+      // is read again under it: two processes starting on a fresh file at
+      // once apply each migration once, the second finding it recorded.
+      db.exec("BEGIN IMMEDIATE");
+      const appliedMeanwhile = db
+        .prepare(`SELECT "checksum" FROM "_prisma_migrations" WHERE "migration_name" = ?`)
+        .get(migration.name) as Record<string, unknown> | undefined;
+      if (appliedMeanwhile !== undefined) {
+        db.exec("COMMIT");
+        result.alreadyApplied.push(migration.name);
+        if (String(appliedMeanwhile["checksum"]) !== migration.checksum) result.changed.push(migration.name);
+        continue;
+      }
       try {
         db.exec(migration.sql);
         db.prepare(

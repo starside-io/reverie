@@ -1,0 +1,27 @@
+{
+  "name": "@reverie/connector-transcripts",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Reads one Claude Code session transcript off disk and hands it over as turns: role, text, and the time when there is one.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  },
+  "files": [
+    "dist"
+  ]
+}

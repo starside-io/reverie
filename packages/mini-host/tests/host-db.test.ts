@@ -32,7 +32,7 @@ describe("host.db", () => {
     const { host } = throwaway();
     try {
       const names = tableNames(host);
-      for (const table of ["proposal", "audit", "setting", "value", "local_path", "event"]) {
+      for (const table of ["proposal", "proposal_claim", "audit", "setting", "value", "local_path", "event"]) {
         expect(names).toContain(table);
       }
 
@@ -43,7 +43,7 @@ describe("host.db", () => {
       expect(Number(Object.values(keys)[0])).toBe(1);
 
       const version = host.db.prepare("PRAGMA user_version").get() as Record<string, unknown>;
-      expect(Number(Object.values(version)[0])).toBe(1);
+      expect(Number(Object.values(version)[0])).toBe(2);
     } finally {
       host.close();
     }

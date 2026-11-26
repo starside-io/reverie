@@ -9,6 +9,7 @@
 import { z } from "zod";
 
 import { checkSecrets } from "../../domain/discipline.js";
+import { resolveShelf } from "../../domain/catalogue/shelving.js";
 import { supersedeMemory } from "../../domain/memories.js";
 import { dateOnlySchema, dayKey, optionalText } from "../../schemas/common.js";
 import { MemoryKind, type MemoryScope, type TrustTier } from "../../schemas/enums.js";
@@ -20,6 +21,7 @@ import { defineTool, ToolError, type ToolContext } from "../registry.js";
 import type { DraftedProvenance } from "../shared/confirm-drafted.js";
 import { enforceDiscipline, refuseFindings } from "../shared/discipline.js";
 import { callSchema } from "../shared/inputs.js";
+import { projectShelfPath } from "../shared/project.js";
 import { buildRefs, personInputSchema } from "../shared/refs.js";
 import { capQuote, statedSource } from "../shared/session.js";
 import { memoryView, type MemoryView } from "../shared/views.js";
@@ -160,6 +162,14 @@ export async function commitSupersede(
     unresolved = built.unresolved;
   }
 
+  // The replacement keeps the old shelf unless told otherwise. A project
+  // entry left waiting on Returns goes to its project's shelf instead, as a
+  // new project memory given no shelf does.
+  let shelf = input.shelf;
+  if (shelf === undefined && row.scope === "project" && row.shelfId === (await resolveShelf(ctx.db, ctx.config.defaultShelf)).id) {
+    shelf = (await projectShelfPath(ctx.db, row.scopeRef)) ?? undefined;
+  }
+
   // The replacement's vector, computed before the commit opens. The old entry keeps its own.
   const vector = await prepareEmbedding(ctx, { title, body: input.body });
 
@@ -167,7 +177,7 @@ export async function commitSupersede(
     ctx.db,
     { id: row.id },
     {
-      ...(input.shelf !== undefined ? { shelf: input.shelf } : {}),
+      ...(shelf !== undefined ? { shelf } : {}),
       occurredOn: input.occurredOn ?? dayKey(ctx.now),
       kind,
       scope: row.scope as MemoryScope,

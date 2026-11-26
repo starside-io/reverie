@@ -11,7 +11,12 @@ import { dirname, join } from "node:path";
  * lets `reverie restart` bring it back the same way on new code.
  *
  * Lifted from Fellowship's host-lock.ts. As there, only `serve` takes the
- * lock: the stdio MCP server neither takes nor checks it.
+ * lock: the stdio MCP server neither takes nor checks it. That is a decision,
+ * not an oversight: the lock keeps two HTTP hosts apart, while the many MCP
+ * servers (one per Claude Code session) write the same files directly and
+ * rely on the multi-process rules written at runStdioServer in mcp.ts,
+ * proved by tests/concurrency.test.ts. So "one host at a time" holds for
+ * serve, and the silo itself has several writers that take turns at the file.
  */
 
 export const HOST_LOCK_FILE = "host.lock";

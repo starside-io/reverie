@@ -1,0 +1,12 @@
+{"type": "summary", "summary": "Allotment planning", "leafUuid": "a1"}
+{"type": "user", "isMeta": true, "message": {"role": "user", "content": "<command-name>/clear</command-name>"}, "timestamp": "2026-11-20T09:00:00.000Z"}
+{"type": "user", "message": {"role": "user", "content": "Jane Doe and I agreed the north beds get the tomatoes on the Maple Street allotment."}, "timestamp": "2026-11-20T09:01:00.000Z", "uuid": "u1"}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": "PRIVATE-THINKING-SHOULD-NOT-APPEAR"}, {"type": "text", "text": "Noted: the north beds are for tomatoes, and Sam Rivera keeps the seed trays."}, {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "ls"}}]}, "timestamp": "2026-11-20T09:01:30.000Z"}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "TOOL-RESULT-SHOULD-NOT-APPEAR"}]}, "timestamp": "2026-11-20T09:01:31.000Z"}
+{"type":"user","message":{"role":"user","content": this is not json
+{"type": "attachment", "attachment": {"type": "file", "content": "ATTACHMENT-SHOULD-NOT-APPEAR"}}
+{"type": "user", "isSidechain": true, "message": {"role": "user", "content": "SIDECHAIN-SHOULD-NOT-APPEAR"}, "timestamp": "2026-11-20T09:02:00.000Z"}
+{"type": "user", "isCompactSummary": true, "message": {"role": "user", "content": "COMPACT-SUMMARY-SHOULD-NOT-APPEAR"}}
+{"type": "user", "message": {"role": "user", "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "iVBORw0KGgoIMAGE-SHOULD-NOT-APPEAR"}}, {"type": "text", "text": "John Doe sent this photo of the shed roof."}]}, "timestamp": "2026-11-20T09:03:00.000Z"}
+{"type": "file-history-snapshot", "snapshot": {"files": ["SNAPSHOT-SHOULD-NOT-APPEAR"]}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "The shed roof needs two new felt sheets before the frost."}]}}

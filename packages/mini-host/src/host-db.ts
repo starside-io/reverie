@@ -13,15 +13,19 @@ import { storage } from "@reverie/core";
  * silo export never entangles them. One file per owner. A folder path is true
  * on one machine only, which is why it is here and never in the silo.
  *
- * Plain node:sqlite rather than Prisma, as in Fellowship. Six tables, no
+ * Plain node:sqlite rather than Prisma, as in Fellowship. Seven tables, no
  * relations worth modelling, and a second generated client to keep in step
  * would cost more than it buys.
  */
 
 export const HOST_DB_FILE_NAME = "host.db";
 
-/** Bumped when the statements below stop describing the file. */
-const SCHEMA_VERSION = 1;
+/**
+ * Bumped when the statements below stop describing the file. 2 added
+ * proposal_claim, which a version 1 file gains on open: the statements only
+ * ever add.
+ */
+const SCHEMA_VERSION = 2;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS "proposal" (
@@ -37,6 +41,12 @@ CREATE TABLE IF NOT EXISTS "proposal" (
   "decidedAt"  TEXT
 );
 CREATE INDEX IF NOT EXISTS "proposal_state_idx" ON "proposal" ("state", "createdAt");
+
+CREATE TABLE IF NOT EXISTS "proposal_claim" (
+  "id"         TEXT PRIMARY KEY,
+  "holder"     TEXT NOT NULL,
+  "claimedAt"  TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS "audit" (
   "id"     INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,10 +110,13 @@ export function openHostDb(path: string = resolveHostDbPath()): HostDb {
   mkdirSync(dirname(path), { recursive: true });
 
   const db = new DatabaseSync(path);
+  // busy_timeout first, so the rest waits for another process holding the
+  // file (one MCP server per session opens it, a serve may too) rather than
+  // failing at once.
+  db.exec("PRAGMA busy_timeout = 5000");
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = NORMAL");
   db.exec("PRAGMA foreign_keys = ON");
-  db.exec("PRAGMA busy_timeout = 5000");
 
   const foreignKeys = db.prepare("PRAGMA foreign_keys").get() as Record<string, unknown>;
   if (Number(Object.values(foreignKeys)[0]) !== 1) {

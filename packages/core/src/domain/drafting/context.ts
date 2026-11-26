@@ -66,8 +66,23 @@ export const draftTargetSchema = z.discriminatedUnion("job", [
   z
     .object({
       job: z.literal("extract"),
-      material: materialSchema,
-      /** The day the material is from, for resolving relative dates. Defaults to today. */
+      /**
+       * The turns or the file to draft from, as the caller has them. Leave it
+       * out and name a `session` to draft from a finished session's notes and
+       * transcript instead; leave both out (draft_context only) for the list
+       * of finished sessions waiting for extraction.
+       */
+      material: materialSchema.optional(),
+      /**
+       * A finished session, by id, from that list. Its material is read by
+       * the module (its session notes, and its transcript turns when the host
+       * has the transcripts connector), never passed in, and read again by
+       * propose_draft to check every quote against it.
+       */
+      session: z.string().trim().min(1).max(200).optional(),
+      /** Which page of the session's transcript: the turn it starts at. draft_context fills it. */
+      cursor: z.number().int().min(0).max(1_000_000).optional(),
+      /** The day the material is from, for resolving relative dates. Defaults to today, or the session's own day. */
       sessionDate: draftDateSchema.optional(),
     })
     .strict(),
@@ -103,6 +118,8 @@ export const draftTargetSchema = z.discriminatedUnion("job", [
 export type DraftTarget = z.infer<typeof draftTargetSchema>;
 export type DraftTargetInput = z.input<typeof draftTargetSchema>;
 export type TargetOf<J extends DraftJob> = Extract<DraftTarget, { job: J }>;
+/** An extract target with its material in hand, whoever supplied it. */
+export type ExtractWithMaterial = TargetOf<"extract"> & { material: Material };
 
 export interface DraftContext {
   job: DraftJob;
@@ -144,7 +161,10 @@ export async function buildDraftContext(
 ): Promise<DraftContext> {
   switch (target.job) {
     case "extract":
-      return extractContext(db, target, options.now);
+      if (!target.material) {
+        throw new DomainError("invalid_input", "An extract job drafts from material: pass the turns or the file, or name a finished session.");
+      }
+      return extractContext(db, { ...target, material: target.material }, options.now);
     case "reconcile":
       return reconcileContext(db, target, options);
     case "consolidate":
@@ -175,7 +195,7 @@ export async function shelfList(db: Db): Promise<Array<{ path: string; name: str
   );
 }
 
-async function extractContext(db: Db, target: TargetOf<"extract">, now: Date): Promise<DraftContext> {
+async function extractContext(db: Db, target: ExtractWithMaterial, now: Date): Promise<DraftContext> {
   const sessionDate = target.sessionDate ?? dayKey(now);
   const [shelves, vocabulary] = await Promise.all([shelfList(db), tagVocabulary(db)]);
   const tags = vocabulary.map((tag) => ({ slug: tag.slug, count: tag.count }));

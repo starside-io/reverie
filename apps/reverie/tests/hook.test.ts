@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -385,5 +385,17 @@ describe("plugin-bootstrap.mjs hook, on a checkout that is not built", () => {
 
     // No library was opened or made.
     expect(readdirSync(io.dir).sort()).toEqual(["elmwood-garden"]);
+  });
+});
+
+describe("hooks/hooks.json", () => {
+  it("runs SessionStart after a startup, a resume, a clear and a compaction, so the core block comes back each time", () => {
+    const config = JSON.parse(readFileSync(join(REPO_ROOT, "hooks", "hooks.json"), "utf8")) as {
+      hooks: Record<string, Array<{ matcher?: string; hooks: Array<{ command: string }> }>>;
+    };
+    const start = config.hooks["SessionStart"] ?? [];
+    expect(start).toHaveLength(1);
+    expect((start[0]?.matcher ?? "").split("|").sort()).toEqual(["clear", "compact", "resume", "startup"]);
+    expect(start[0]?.hooks[0]?.command).toContain("hook session-start");
   });
 });

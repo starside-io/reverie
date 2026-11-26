@@ -14,6 +14,7 @@ const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 
 const ALLOWED_PACKAGES = [
   "@reverie/core",
+  "@reverie/connector-transcripts",
   "@hono/node-server",
   "@modelcontextprotocol/sdk",
   "hono",

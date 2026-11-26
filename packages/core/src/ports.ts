@@ -99,6 +99,18 @@ export interface ReviewPort {
   get(id: string): Promise<QueuedProposal | null>;
   /** Marks a pending proposal. False when it was not pending. */
   decide(id: string, state: "confirmed" | "discarded"): Promise<boolean>;
+  /**
+   * Takes a pending proposal for this caller to decide, so two processes
+   * over the same review queue (one MCP server per session, a serve beside
+   * them) cannot both run its write. True when this caller holds it now;
+   * false when it is not pending or another caller holds it. A claim left by
+   * a process that died lapses on its own. Optional, so the shared shape
+   * stays Fellowship's: without it decide runs unclaimed, which is safe with
+   * one process and only then.
+   */
+  claim?(id: string): Promise<boolean>;
+  /** Lets go of a claim this caller took, decided or not. */
+  release?(id: string): Promise<void>;
 }
 
 /** The events this module emits, as docs/SPEC.md section 18 lists them. */
@@ -243,6 +255,19 @@ export interface SettingsValuesPort {
   /** Undefined when the key was never set. */
   get(key: string): Promise<unknown>;
   set(key: string, value: unknown): Promise<void>;
+  /**
+   * Reads `keys`, hands their values to `change`, and writes what it returns,
+   * as one step no other process can interleave with: the read and the write
+   * of a list another session appends to at the same moment. `change` is
+   * synchronous and may run again if the host retries. Keys it leaves out of
+   * its answer are not written. Optional, so the shared shape stays
+   * Fellowship's: without it core reads then writes, which is safe with one
+   * process and only then.
+   */
+  update?(
+    keys: readonly string[],
+    change: (current: Record<string, unknown>) => Record<string, unknown>,
+  ): Promise<Record<string, unknown>>;
 }
 
 export type RefResolution =

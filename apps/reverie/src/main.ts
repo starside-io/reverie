@@ -59,8 +59,9 @@ export const USAGE = `reverie <command>
   export <file>            Write the whole library to a snapshot file.
   reindex                  Rebuild the search index from the memory rows and
                            check it. For a file restored from a backup.
-  dream                    Whether a consolidation pass is due. The library
-                           never calls a model: an assistant runs the pass.
+  dream                    Whether a consolidation pass is due and how many
+                           finished sessions wait for extraction. The library
+                           never calls a model: an assistant runs both.
   hook <event>             One Claude Code plugin hook: session-start,
                            pre-compact or session-end. Reads the hook JSON on
                            stdin, prints the hook payload or nothing, and
@@ -373,7 +374,7 @@ async function importCommand(argv: string[], io: Io): Promise<number> {
  * this binary can run on its own. It reports what core knows (whether the
  * consolidate job is due by consolidateEvery, how many proposals already
  * wait, how many sessions are marked ready for extraction) and names what an
- * assistant runs to do the pass.
+ * assistant runs to extract those sessions and to do the pass.
  */
 async function dream(io: Io): Promise<number> {
   return withHost(io, async (host) => {
@@ -389,13 +390,17 @@ async function dream(io: Io): Promise<number> {
         `consolidation  ${due ? "due" : "not due"}`,
         `  last run     ${state.lastAt ? state.lastAt.toISOString() : "never"}`,
         `  sessions     ${state.sessionsSince} since, due after ${config.consolidateEvery.sessions} or ${config.consolidateEvery.days} days`,
-        `ready to extract  ${ready.length} sessions`,
+        `ready to extract  ${ready.length} ${ready.length === 1 ? "session" : "sessions"}${config.incognito ? " (incognito is on: none is read)" : ""}`,
         `to review         ${pending} proposals`,
         "",
         "The library never calls a model, so this command runs no pass. In an assistant",
-        "session, run /reverie:dream: it calls memory_draft_context with job consolidate,",
-        "reasons over the material, and hands its answer to memory_propose_draft. What it",
-        "proposes waits in review: nothing changes until you decide.",
+        "session, run /reverie:dream. For each finished session waiting, it calls",
+        "memory_draft_context with job extract and that session (its notes and transcript",
+        "turns, a page at a time), drafts the memories worth keeping, and hands them to",
+        "memory_propose_draft; the session stops waiting once its last page is proposed.",
+        "Then the consolidation pass: memory_draft_context with job consolidate, and its",
+        "answer to memory_propose_draft. What either proposes waits in review: nothing",
+        "changes until you decide.",
         "",
       ].join("\n"),
     );

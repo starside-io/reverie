@@ -16,10 +16,17 @@ gate suite are in `packages/core`. The mini-host in `packages/mini-host` serves
 them over `POST /rpc` on 127.0.0.1 and over stdio MCP, and `apps/reverie` is
 the `reverie` binary. The Claude Code plugin is in place: the commands and the
 skill drive those tools, and three hooks add the core block for the project at
-session start, remind the compaction summary to keep session notes, and mark
-a finished session ready for extraction with a pointer to its transcript. A
-second session in the same folder opens knowing what the first pinned. The
-shared kit with Fellowship is not extracted yet. There is no UI (M6) and no
+session start (and again after a resume, a `/clear` or a compaction), remind
+the compaction summary to keep session notes, and mark a finished session
+ready for extraction with a pointer to its transcript. A second session in the
+same folder opens knowing what the first pinned, and can draft from what the
+first left behind: `memory_draft_context` lists the finished sessions and
+hands over each one's notes and transcript turns, read off disk by
+`packages/connector-transcripts`, and what it drafts waits in review. Each
+session's MCP server writes the same files directly, beside the others and
+beside `serve`; a test with several real processes writing at once holds
+that to no lost write and no reissued call number. The shared kit with
+Fellowship is not extracted yet. There is no UI (M6) and no
 Fellowship link (M5). The build spec is [`docs/SPEC.md`](docs/SPEC.md),
 milestones M0 to M9.
 
@@ -103,7 +110,7 @@ To list it in a marketplace file you already maintain, add this to its
 | `/reverie:forget <call number>` | Permanently forget one memory |
 | `/reverie:dream` | Consolidation pass: duplicates, contradictions, stale entries |
 | `/reverie:setup` | Sections, shelves, projects, and what to bring in |
-| `/reverie:open` | Start the host and open the library |
+| `/reverie:open` | Start the host, or find the one running; the library UI arrives at M6 |
 | `skills/reverie` | The procedure, including when to call Fellowship |
 
 ## Layout
@@ -121,7 +128,8 @@ docs/SPEC.md           the build spec, M0 to M9
 
 `packages/core` holds the module: storage, domain, tools and gates.
 `packages/mini-host` is the host: ports, host.db, host.lock, `/rpc` and the
-stdio MCP server. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
+stdio MCP server. `packages/connector-transcripts` reads a session transcript
+off disk as turns, behind the host's `connectors` port. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
 `status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, and
 `hook` for the plugin hooks). Run
 `pnpm install`, `pnpm test`, `pnpm build`, `pnpm db:check`. The rest of

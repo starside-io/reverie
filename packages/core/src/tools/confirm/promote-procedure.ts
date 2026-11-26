@@ -19,7 +19,7 @@ import { tagSlugSchema } from "../../schemas/tag.js";
 import { defineTool, ToolError } from "../registry.js";
 import { enforceDiscipline, refuseFindings } from "../shared/discipline.js";
 import { confirmedByUser } from "../shared/inputs.js";
-import { resolveProject } from "../shared/project.js";
+import { projectShelfPath, resolveProject } from "../shared/project.js";
 import { capQuote, scopeRefFor, statedSource } from "../shared/session.js";
 import { memoryView, type MemoryView } from "../shared/views.js";
 import { emitWritten } from "../shared/write-common.js";
@@ -138,7 +138,10 @@ export const tool = defineTool({
     const created = await createMemory(
       ctx.db,
       {
-        shelf: input.shelf ?? ctx.config.defaultShelf,
+        shelf:
+          input.shelf ??
+          (input.scope === "project" ? await projectShelfPath(ctx.db, scopeRef) : null) ??
+          ctx.config.defaultShelf,
         occurredOn: input.occurredOn ?? dayKey(ctx.now),
         kind: "procedure",
         scope: input.scope,

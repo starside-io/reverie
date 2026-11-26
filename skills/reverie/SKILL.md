@@ -68,8 +68,10 @@ lists them and says which one this session resolves to. A session in a
 registered folder, or with a git remote that matches a project's repository,
 belongs to that project: its memories are recalled and it fills the core
 block's project slot. What is remembered stays global unless the write says
-otherwise: pass `scope: "project"`, or the project's shelf, to keep a memory
-with the project. A session anywhere else is global.
+otherwise: pass `scope: "project"` to keep a memory with the project. Given no
+shelf, a project memory goes to the project's shelf, not Returns. A session
+anywhere else is global, and `scope: "project"` there is refused unless
+`scopeRef` names the project.
 
 Do not turn an unregistered folder into a project because its name looks like
 one. Say it is not registered and offer to add it.
@@ -209,16 +211,33 @@ corrections given. Notes are scratch held against this session, expire after
 `sessionNoteTtlHours`, and are never recalled as memories. When the session
 ends it is marked ready for extraction, with a pointer to its transcript.
 
-Today no tool hands the notes or the transcript back: the extract job
-(`memory_draft_context { job: "extract" }`) reads only the turns or the file
-you pass it as `material`. So what must outlive the session goes through a
-door now: `memory_remember` for what the owner said to keep, or the extract
-job over the turns in this conversation, then `memory_propose_draft`.
+A later session drafts from it, through the extract job (`/reverie:dream`
+walks it):
+
+1. `memory_draft_context { job: "extract" }` with no material and no session
+   lists the finished sessions waiting, with their note counts and whether a
+   transcript is there.
+2. `memory_draft_context { job: "extract", session: "<id>" }` hands over that
+   session's notes and its transcript turns, a page at a time. A `note` turn
+   is the assistant's own words, not the owner's. Without a transcript it is
+   the notes alone, and the answer says so.
+3. Draft from the page and pass the answer to `memory_propose_draft` with the
+   `target` as returned: every quote is checked against that same page. Follow
+   the `continuation` for the next page. The session stops waiting once its
+   last page is proposed.
+
+What the owner said to keep still goes in at once with `memory_remember`; the
+extract job is for what a model concludes, and it lands in review.
+
+After `/clear`, notes written in the new conversation may still be filed
+under the session `/clear` ended: the MCP server keeps the session id it
+started with.
 
 ## Incognito
 
-When it is on, no capture runs, no session is marked for extraction, and every
-write is refused with the reason; reads still answer. Say that it is on. Do
+When it is on, no capture runs (a finished session's notes and transcript are
+not read for extraction), no session is marked for extraction, and every write
+is refused with the reason; reads still answer. Say that it is on. Do
 not try to route around it.
 
 ## The data is real

@@ -18,8 +18,10 @@ import {
  * scripts/plugin-bootstrap.mjs, which hands over to `reverie hook <event>`.
  *
  *   session-start  the core block for this project, as additional context,
- *                  and one line when review items or a consolidation wait.
- *                  Runs no search.
+ *                  and one line when review items, finished sessions to
+ *                  extract, or a consolidation wait. Runs no search.
+ *                  hooks/hooks.json runs it on startup, resume, clear and
+ *                  compact, so the block is back after each of them.
  *   pre-compact    reminds the model, through the compaction summary, to put
  *                  anything worth keeping into memory_session_note. Writes
  *                  nothing.
@@ -172,17 +174,23 @@ async function sessionStart(io: HookIo, input: HookInput): Promise<string> {
       config.consolidateEvery,
       new Date(),
     );
+    // Finished sessions whose notes and transcript wait to be drafted from.
+    // While incognito is on none can be read, so none is announced.
+    const ready = config.incognito ? 0 : (await coreTools.shared.readyForExtraction(host.ports)).length;
 
     // An empty library says nothing: no memory, no owner line, no project
     // for this folder, nothing waiting. The library map alone (seeded
     // shelves, every count zero) is noise.
     const held = core.included.some((item) => ["owner", "procedures", "pinned", "project"].includes(item.slot));
     const active = stats.byState["active"] ?? 0;
-    const empty = !held && active === 0 && pending === 0 && !due;
+    const empty = !held && active === 0 && pending === 0 && !due && ready === 0;
     if (empty) return config.incognito ? hookContext(INCOGNITO_LINE) : "";
 
     const waiting: string[] = [];
     if (pending > 0) waiting.push(`${pending} ${pending === 1 ? "proposal waits" : "proposals wait"} in review (/reverie:review).`);
+    if (ready > 0) {
+      waiting.push(`${ready} finished ${ready === 1 ? "session waits" : "sessions wait"} for extraction (/reverie:dream).`);
+    }
     if (due) waiting.push("A consolidation pass is due (/reverie:dream).");
 
     const parts = [SESSION_START_LEAD, core.text];

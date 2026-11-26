@@ -1,9 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
+import { createTranscriptsConnector } from "@reverie/connector-transcripts";
 import { config as coreConfig, domain, tools as coreTools } from "@reverie/core";
 import type {
   AuditPort,
   BusPort,
+  ConnectorsPort,
   HostPorts,
   LocalPathsPort,
   ModelsPort,
@@ -37,6 +40,12 @@ export interface PortsOptions {
    * endpoint of its own, and recall runs on FTS alone and says so.
    */
   models?: ModelsPort;
+  /**
+   * The transcripts connector (docs/SPEC.md section 12), on by default.
+   * False leaves the connectors port out, so extraction from a finished
+   * session hands over its notes alone and says so.
+   */
+  transcripts?: boolean;
 }
 
 export interface MiniHostPorts {
@@ -56,7 +65,8 @@ export class SettingsError extends Error {
 
 /**
  * Every port the module can reach, over one silo and one host.db. Lifted
- * from Fellowship's ports/index.ts, minus media and connectors.
+ * from Fellowship's ports/index.ts, minus media, and with Reverie's own
+ * transcripts connector behind the connectors port.
  *
  * The two that carry a rule rather than a lookup:
  *
@@ -95,6 +105,8 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     set: async (key, value) => {
       store.writeValue(key, value);
     },
+    // Under host.db's write lock: several processes end sessions at once.
+    update: async (keys, change) => store.updateValues(keys, change),
   };
 
   const localPaths: LocalPathsPort = {
@@ -137,6 +149,8 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     localPaths,
   };
 
+  const holder = `${process.pid}:${randomUUID()}`;
+
   const queued = (row: ProposalRow): QueuedProposal => ({
     id: row.id,
     tool: row.tool,
@@ -157,6 +171,10 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
       return row ? queued(row) : null;
     },
     decide: async (id, state) => store.decideProposal(id, state),
+    // One holder per host instance: another process, or another instance in
+    // this one, sees the proposal as taken until this one lets go.
+    claim: async (id) => store.claimProposal(id, holder),
+    release: async (id) => store.releaseProposal(id, holder),
   };
 
   const bus: BusPort = {
@@ -176,6 +194,26 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     },
   };
 
+  // The transcripts connector reads one file: the pointer the SessionEnd
+  // hook stored for a session that is still waiting for extraction. The
+  // session id comes from core; the path never does, so no tool input can
+  // name a file to read. The markdown connector is not built yet (M7).
+  const transcripts = createTranscriptsConnector({
+    pointerFor: (session) => {
+      const ready = store.readValue(coreTools.shared.READY_FOR_EXTRACTION_KEY);
+      if (!Array.isArray(ready) || !ready.includes(session)) return null;
+      const pointers = store.readValue(coreTools.shared.TRANSCRIPTS_KEY) as Record<string, unknown> | undefined;
+      const pointer = pointers && typeof pointers === "object" ? pointers[session] : undefined;
+      return typeof pointer === "string" ? pointer : null;
+    },
+  });
+  const connectors: ConnectorsPort = {
+    pull: async (name, cursor) => {
+      if (name === transcripts.name) return transcripts.pull(cursor);
+      throw Object.assign(new Error(`This host has no ${name} connector.`), { code: "unknown_connector" });
+    },
+  };
+
   const privacy: PrivacyPort = { redact: (text) => text };
 
   const refs: RefsPort = { resolve: (ref) => resolveRef(silo, ref) };
@@ -189,6 +227,7 @@ export function createPorts(options: PortsOptions): MiniHostPorts {
     refs,
     privacy,
     ...(options.models ? { models: options.models } : {}),
+    ...(options.transcripts === false ? {} : { connectors }),
   };
 
   return { ports, emitter, readConfig };

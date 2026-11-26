@@ -169,15 +169,12 @@ describe("M4: a second session opens knowing what the first learned", () => {
       const notes = await host.silo.sessionNote.findMany({ where: { sessionId: SESSION_ONE } });
       expect(notes.map((row) => row.body)).toEqual(["Jane Doe prefers the north beds for the tomatoes this year."]);
 
-      // The extract job is not given the note today. It takes only the turns
-      // or the file the caller passes as material, and no tool reads session
-      // notes or the transcript pointer back, so an extractor in a later
-      // session cannot reach either through the tools.
-      const extract = (await host.api.invoke(
-        "memory.draft_context",
-        { job: "extract", material: { kind: "turns", turns: [{ role: "user", text: "Let us plan the beds." }] } },
-        { session: { id: SESSION_ONE, folder: project } },
-      )) as Record<string, unknown>;
+      // A later session finds it waiting for extraction, its note with it
+      // (tests/extraction.test.ts walks the whole extraction).
+      const extract = (await host.api.invoke("memory.draft_context", { job: "extract" }, { session: { id: SESSION_TWO, folder: project } })) as {
+        ready: Array<{ session: string; notes: number; transcript: boolean }>;
+      };
+      expect(extract.ready).toEqual([{ session: SESSION_ONE, notes: 1, transcript: true }]);
       expect(JSON.stringify(extract)).not.toContain("north beds");
       expect(JSON.stringify(extract)).not.toContain(transcript);
     } finally {

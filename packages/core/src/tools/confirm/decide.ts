@@ -14,6 +14,7 @@
 
 import { z } from "zod";
 
+import type { QueuedProposal } from "../../ports.js";
 import { defineTool, toToolError, ToolError, type ToolContext } from "../registry.js";
 import { draftedProvenance, type DraftedProvenance } from "../shared/confirm-drafted.js";
 import {
@@ -101,75 +102,27 @@ export const tool = defineTool({
     confirmedByUser,
   }),
   async handler(ctx, input): Promise<DecideResult> {
-    const proposal = await ctx.ports.review.get(input.proposalId);
+    const review = ctx.ports.review;
+    const proposal = await review.get(input.proposalId);
     if (!proposal) throw new ToolError("not_found", `No proposal with id "${input.proposalId}".`);
-    if (proposal.state !== "pending") {
-      throw new ToolError("conflict", `That proposal is already ${proposal.state}.`, {
+    if (proposal.state !== "pending") throw alreadyDecided(proposal.id, proposal.state);
+
+    // Several processes share the queue (one MCP server per session). The
+    // claim makes this the only one deciding the proposal, so its write runs
+    // once: a second decision of it at the same moment is a conflict.
+    if (review.claim && !(await review.claim(proposal.id))) {
+      const now = await review.get(proposal.id);
+      if (now && now.state !== "pending") throw alreadyDecided(proposal.id, now.state);
+      throw new ToolError("conflict", "That proposal is being decided in another session right now.", {
         proposalId: proposal.id,
-        state: proposal.state,
+        state: "pending",
       });
     }
-
-    if (input.decision === "reject") {
-      await ctx.ports.review.decide(proposal.id, "discarded");
-      return { proposalId: proposal.id, state: "discarded", written: false };
-    }
-
-    // Guardrail 8, again at decide time: a proposal that reached the queue by
-    // another door still cannot run decide or propose_draft.
-    assertProposable(proposal.tool);
-
-    const { input: toolInput, draft } = splitPayload(proposal.payload);
-    const actor = `proposal:${proposal.id}`;
-    const drafted = DRAFTED_COMMITS[proposal.tool];
-
-    let result: unknown;
     try {
-      if (drafted && draft) {
-        const parsed = drafted.schema.safeParse(toolInput);
-        if (!parsed.success) {
-          throw new ToolError("invalid_input", `The proposal's payload is not valid input for ${proposal.tool}.`, {
-            issues: parsed.error.issues.slice(0, 10),
-          });
-        }
-        result = await drafted.commit({ ...ctx, actor }, parsed.data as never, draftedProvenance(draft));
-      } else if (MAKES_A_MEMORY.has(proposal.tool)) {
-        throw new ToolError(
-          "refused",
-          `No source, no memory: a proposal for ${proposal.tool} carries the draft it came from, and this one carries none.`,
-        );
-      } else {
-        // confirmedByUser goes with it: the owner's yes to this proposal is
-        // the yes the named tool asks for. A write tool ignores the flag.
-        result = await ctx.invoke(proposal.tool, { ...toolInput, confirmedByUser: true }, { actor });
-      }
-    } catch (raw) {
-      // The write did not happen, so the decision is not made: the proposal
-      // stays pending, and the inner refusal comes back beside this one.
-      const error = toToolError(raw);
-      if (error instanceof ToolError) {
-        throw new ToolError(
-          "refused",
-          `The proposed ${proposal.tool} was refused, so nothing was written and the proposal stays pending: ${error.message}`,
-          { proposalId: proposal.id, state: "pending", code: error.code, detail: error.detail },
-        );
-      }
-      throw error;
+      return await settle(ctx, proposal, input.decision);
+    } finally {
+      await review.release?.(proposal.id);
     }
-
-    const memory = committedMemory(result);
-    await ctx.ports.review.decide(proposal.id, "confirmed");
-
-    const occasion = draft?.pendingOccasion ?? null;
-    return {
-      proposalId: proposal.id,
-      state: "confirmed",
-      written: true,
-      tool: proposal.tool,
-      committed: memory ? { call: memory.call } : null,
-      followUp: occasion && memory ? followUpFor(occasion, memory.call) : null,
-      result,
-    };
   },
   auditIds: (input, result) => {
     const memory = result && result.state === "confirmed" ? committedMemory(result.result) : null;
@@ -179,3 +132,75 @@ export const tool = defineTool({
     };
   },
 });
+
+function alreadyDecided(proposalId: string, state: string): ToolError {
+  return new ToolError("conflict", `That proposal is already ${state}.`, { proposalId, state });
+}
+
+/** The decision itself, once this call holds the proposal. */
+async function settle(
+  ctx: ToolContext,
+  proposal: QueuedProposal,
+  decision: "confirm" | "reject",
+): Promise<DecideResult> {
+  if (decision === "reject") {
+    if (!(await ctx.ports.review.decide(proposal.id, "discarded"))) throw alreadyDecided(proposal.id, "decided");
+    return { proposalId: proposal.id, state: "discarded", written: false };
+  }
+
+  // Guardrail 8, again at decide time: a proposal that reached the queue by
+  // another door still cannot run decide or propose_draft.
+  assertProposable(proposal.tool);
+
+  const { input: toolInput, draft } = splitPayload(proposal.payload);
+  const actor = `proposal:${proposal.id}`;
+  const drafted = DRAFTED_COMMITS[proposal.tool];
+
+  let result: unknown;
+  try {
+    if (drafted && draft) {
+      const parsed = drafted.schema.safeParse(toolInput);
+      if (!parsed.success) {
+        throw new ToolError("invalid_input", `The proposal's payload is not valid input for ${proposal.tool}.`, {
+          issues: parsed.error.issues.slice(0, 10),
+        });
+      }
+      result = await drafted.commit({ ...ctx, actor }, parsed.data as never, draftedProvenance(draft));
+    } else if (MAKES_A_MEMORY.has(proposal.tool)) {
+      throw new ToolError(
+        "refused",
+        `No source, no memory: a proposal for ${proposal.tool} carries the draft it came from, and this one carries none.`,
+      );
+    } else {
+      // confirmedByUser goes with it: the owner's yes to this proposal is
+      // the yes the named tool asks for. A write tool ignores the flag.
+      result = await ctx.invoke(proposal.tool, { ...toolInput, confirmedByUser: true }, { actor });
+    }
+  } catch (raw) {
+    // The write did not happen, so the decision is not made: the proposal
+    // stays pending, and the inner refusal comes back beside this one.
+    const error = toToolError(raw);
+    if (error instanceof ToolError) {
+      throw new ToolError(
+        "refused",
+        `The proposed ${proposal.tool} was refused, so nothing was written and the proposal stays pending: ${error.message}`,
+        { proposalId: proposal.id, state: "pending", code: error.code, detail: error.detail },
+      );
+    }
+    throw error;
+  }
+
+  const memory = committedMemory(result);
+  await ctx.ports.review.decide(proposal.id, "confirmed");
+
+  const occasion = draft?.pendingOccasion ?? null;
+  return {
+    proposalId: proposal.id,
+    state: "confirmed",
+    written: true,
+    tool: proposal.tool,
+    committed: memory ? { call: memory.call } : null,
+    followUp: occasion && memory ? followUpFor(occasion, memory.call) : null,
+    result,
+  };
+}

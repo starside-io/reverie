@@ -4,16 +4,23 @@
 export { enforceDiscipline, refuseFindings } from "./discipline.js";
 export { callSchema, confirmedByUser } from "./inputs.js";
 export {
+  clearReadyForExtraction,
   consolidationDue,
+  endSession,
   readConsolidation,
   readyForExtraction,
+  READY_FOR_EXTRACTION_KEY,
+  transcriptPointer,
   transcriptPointers,
+  TRANSCRIPTS_KEY,
   type ConsolidationState,
+  type SessionEnded,
 } from "./host-values.js";
 export {
   isWithin,
   longestPathMatch,
   normaliseFolder,
+  projectShelfPath,
   resolveProject,
   resolveProjectFor,
   type ProjectResolution,

@@ -28,6 +28,7 @@ export const DISCIPLINE_RULES: readonly string[] = [
 export const EXTRACT_RULES: readonly string[] = [
   "One candidate is one atomic memory: one fact, one preference, one episode, one reference, or one procedure.",
   "Every candidate carries a quote copied exactly from the material, at most 500 characters. A quote that is not in the material is refused.",
+  "A turn marked note is a session note the assistant kept during that session: the assistant's words, not the owner's. Quote it like any turn.",
   "Pick the shelf from the shelf list by its description. When you cannot tell, give null and it waits on Returns.",
   "Pick tags from the tag list first. A new tag is allowed, and the owner sees it marked as new.",
   "occurredOn is when it happened, not when it was said. For a preference or a procedure it is the day it was established.",

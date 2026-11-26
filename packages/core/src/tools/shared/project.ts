@@ -101,3 +101,20 @@ export async function resolveProjectFor(
 export async function resolveProject(ctx: ToolContext): Promise<ProjectResolution> {
   return resolveProjectFor(ctx.db, ctx.session, ctx.ports.settings.localPaths);
 }
+
+/**
+ * Where a project-scoped memory given no shelf goes: the project's own shelf,
+ * "WRK/NST", found by the project's slug (the memory's scopeRef, filled from
+ * the session or named by the caller). Null when no project has that slug or
+ * the project has no shelf, and the memory waits on Returns as before
+ * (docs/SPEC.md section 5). Section 4 says a project has a shelf "usually
+ * under Work"; this is what makes a project scope land on it.
+ */
+export async function projectShelfPath(db: Db, slug: string | null | undefined): Promise<string | null> {
+  if (!slug) return null;
+  const project = await db.project.findUnique({
+    where: { slug: slug.trim().toLowerCase() },
+    select: { shelf: { select: { code: true, section: { select: { code: true } } } } },
+  });
+  return project?.shelf ? `${project.shelf.section.code}/${project.shelf.code}` : null;
+}

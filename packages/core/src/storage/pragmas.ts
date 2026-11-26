@@ -6,14 +6,15 @@
  */
 
 export const PRAGMAS = [
+  // Wait rather than throw SQLITE_BUSY. First, so the statements after it
+  // wait too when another process holds the file.
+  "PRAGMA busy_timeout = 5000",
   // Readers do not block the writer.
   "PRAGMA journal_mode = WAL",
   // WAL makes this safe enough for a local app.
   "PRAGMA synchronous = NORMAL",
   // Assert it, do not assume the driver set it.
   "PRAGMA foreign_keys = ON",
-  // Wait rather than throw SQLITE_BUSY.
-  "PRAGMA busy_timeout = 5000",
 ] as const;
 
 /** The minimum of a Prisma client this module needs. Keeps tests cheap. */

@@ -92,20 +92,65 @@ export function consolidationDue(
 
 /** Records that the consolidate job queued proposals now: the day count and the session count restart. */
 export async function recordConsolidation(ports: HostPorts, now: Date): Promise<boolean> {
+  const written = await transact(ports, [], () => ({
+    [CONSOLIDATION_LAST_AT_KEY]: now.toISOString(),
+    [CONSOLIDATION_SESSIONS_KEY]: 0,
+  }));
+  return written !== null;
+}
+
+/**
+ * One read and write of several values that no other process interleaves
+ * with, when the host can give that (SettingsValuesPort.update); a plain read
+ * then write otherwise. Several MCP processes (one per session) end sessions
+ * and count them over one host.db, and a read then write there loses one of
+ * two appends made at the same moment. Null when the host keeps no values.
+ */
+async function transact(
+  ports: HostPorts,
+  keys: readonly string[],
+  change: (current: Record<string, unknown>) => Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
   const values = valuesOf(ports);
-  if (!values) return false;
-  await values.set(CONSOLIDATION_LAST_AT_KEY, now.toISOString());
-  await values.set(CONSOLIDATION_SESSIONS_KEY, 0);
-  return true;
+  if (!values) return null;
+  if (values.update) return values.update(keys, change);
+  const current: Record<string, unknown> = {};
+  for (const key of keys) current[key] = await values.get(key);
+  const next = change(current);
+  for (const [key, value] of Object.entries(next)) await values.set(key, value);
+  return { ...current, ...next };
+}
+
+function sessionCount(value: unknown): number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+}
+
+function readyList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+}
+
+function pointerMap(value: unknown): Record<string, string> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
+/** A path fit to keep as a pointer, trimmed, or null. */
+function usablePointer(path: string | null | undefined): string | null {
+  const pointer = path?.trim() ?? "";
+  return pointer.length === 0 || pointer.length > TRANSCRIPT_POINTER_MAX_LENGTH ? null : pointer;
 }
 
 /** Counts one ended session toward consolidateEvery.sessions. */
 export async function countSession(ports: HostPorts): Promise<number | null> {
-  const values = valuesOf(ports);
-  if (!values) return null;
-  const { sessionsSince } = await readConsolidation(ports);
-  const next = sessionsSince + 1;
-  await values.set(CONSOLIDATION_SESSIONS_KEY, next);
+  let next: number | null = null;
+  await transact(ports, [CONSOLIDATION_SESSIONS_KEY], (current) => {
+    next = sessionCount(current[CONSOLIDATION_SESSIONS_KEY]) + 1;
+    return { [CONSOLIDATION_SESSIONS_KEY]: next };
+  });
   return next;
 }
 
@@ -113,31 +158,24 @@ export async function countSession(ports: HostPorts): Promise<number | null> {
 export async function readyForExtraction(ports: HostPorts): Promise<string[]> {
   const values = valuesOf(ports);
   if (!values) return [];
-  const value = await values.get(READY_FOR_EXTRACTION_KEY);
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+  return readyList(await values.get(READY_FOR_EXTRACTION_KEY));
 }
 
 /** Marks one session ready for extraction. False when it already was, or the host keeps no values. */
 export async function markReadyForExtraction(ports: HostPorts, sessionId: string): Promise<boolean> {
-  const values = valuesOf(ports);
-  if (!values) return false;
-  const ready = await readyForExtraction(ports);
-  if (ready.includes(sessionId)) return false;
-  await values.set(READY_FOR_EXTRACTION_KEY, [...ready, sessionId].slice(-READY_FOR_EXTRACTION_MAX));
-  return true;
+  return (await endSession(ports, sessionId, null, { count: false })).marked;
 }
 
 /** Session id to transcript path, for the sessions marked ready for extraction. */
 export async function transcriptPointers(ports: HostPorts): Promise<Record<string, string>> {
   const values = valuesOf(ports);
   if (!values) return {};
-  const value = await values.get(TRANSCRIPTS_KEY);
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
-    ),
-  );
+  return pointerMap(await values.get(TRANSCRIPTS_KEY));
+}
+
+/** The transcript pointer kept for one ready session, or null. */
+export async function transcriptPointer(ports: HostPorts, sessionId: string): Promise<string | null> {
+  return (await transcriptPointers(ports))[sessionId] ?? null;
 }
 
 /**
@@ -147,14 +185,80 @@ export async function transcriptPointers(ports: HostPorts): Promise<Record<strin
  * not a usable path or the host keeps no values.
  */
 export async function setTranscriptPointer(ports: HostPorts, sessionId: string, path: string): Promise<boolean> {
-  const values = valuesOf(ports);
-  if (!values) return false;
-  const pointer = path.trim();
-  if (pointer.length === 0 || pointer.length > TRANSCRIPT_POINTER_MAX_LENGTH) return false;
-  const ready = new Set(await readyForExtraction(ports));
-  const kept = Object.fromEntries(
-    Object.entries(await transcriptPointers(ports)).filter(([id]) => ready.has(id) && id !== sessionId),
-  );
-  await values.set(TRANSCRIPTS_KEY, { ...kept, [sessionId]: pointer });
-  return true;
+  const pointer = usablePointer(path);
+  if (pointer === null) return false;
+  const written = await transact(ports, [READY_FOR_EXTRACTION_KEY, TRANSCRIPTS_KEY], (current) => {
+    const ready = new Set(readyList(current[READY_FOR_EXTRACTION_KEY]));
+    const kept = Object.fromEntries(
+      Object.entries(pointerMap(current[TRANSCRIPTS_KEY])).filter(([id]) => ready.has(id) && id !== sessionId),
+    );
+    return { [TRANSCRIPTS_KEY]: { ...kept, [sessionId]: pointer } };
+  });
+  return written !== null;
+}
+
+export interface SessionEnded {
+  /** False when the session was already ready, or the host keeps no values. */
+  marked: boolean;
+  /** The sessions counted toward consolidation since it last ran, when this one was counted. */
+  sessionsSince: number | null;
+  /** True when a transcript pointer was kept for it. */
+  transcript: boolean;
+}
+
+/**
+ * host.session.ended, as one step: the session joins the ready list (the
+ * oldest drop past READY_FOR_EXTRACTION_MAX), counts once toward
+ * consolidateEvery.sessions, and keeps its transcript pointer; pointers of
+ * sessions no longer ready go. A session delivered twice is marked and
+ * counted once, its pointer refreshed.
+ */
+export async function endSession(
+  ports: HostPorts,
+  sessionId: string,
+  transcriptPath: string | null,
+  options: { count?: boolean } = {},
+): Promise<SessionEnded> {
+  const count = options.count !== false;
+  const pointer = usablePointer(transcriptPath);
+  const outcome: SessionEnded = { marked: false, sessionsSince: null, transcript: false };
+  await transact(ports, [READY_FOR_EXTRACTION_KEY, TRANSCRIPTS_KEY, CONSOLIDATION_SESSIONS_KEY], (current) => {
+    const before = readyList(current[READY_FOR_EXTRACTION_KEY]);
+    const marked = !before.includes(sessionId);
+    const ready = marked ? [...before, sessionId].slice(-READY_FOR_EXTRACTION_MAX) : before;
+    const keep = new Set(ready);
+    const pointers = Object.fromEntries(
+      Object.entries(pointerMap(current[TRANSCRIPTS_KEY])).filter(([id]) => keep.has(id)),
+    );
+    if (pointer !== null && keep.has(sessionId)) pointers[sessionId] = pointer;
+    const patch: Record<string, unknown> = { [READY_FOR_EXTRACTION_KEY]: ready, [TRANSCRIPTS_KEY]: pointers };
+    outcome.marked = marked;
+    outcome.transcript = pointer !== null && keep.has(sessionId);
+    outcome.sessionsSince = null;
+    if (marked && count) {
+      const since = sessionCount(current[CONSOLIDATION_SESSIONS_KEY]) + 1;
+      patch[CONSOLIDATION_SESSIONS_KEY] = since;
+      outcome.sessionsSince = since;
+    }
+    return patch;
+  });
+  return outcome;
+}
+
+/**
+ * Takes one session off the ready list and drops its transcript pointer with
+ * it, as one step. True when it was there: of two callers clearing the same
+ * session at the same moment, exactly one gets true. Clearing a session that
+ * is not ready changes nothing.
+ */
+export async function clearReadyForExtraction(ports: HostPorts, sessionId: string): Promise<boolean> {
+  let was = false;
+  await transact(ports, [READY_FOR_EXTRACTION_KEY, TRANSCRIPTS_KEY], (current) => {
+    const ready = readyList(current[READY_FOR_EXTRACTION_KEY]);
+    was = ready.includes(sessionId);
+    if (!was) return {};
+    const { [sessionId]: _dropped, ...pointers } = pointerMap(current[TRANSCRIPTS_KEY]);
+    return { [READY_FOR_EXTRACTION_KEY]: ready.filter((id) => id !== sessionId), [TRANSCRIPTS_KEY]: pointers };
+  });
+  return was;
 }

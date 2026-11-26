@@ -4,6 +4,7 @@ import {
   proceduresInCore,
   readCoreCandidates,
   readStretch,
+  type ExtractWithMaterial,
   type TargetOf,
 } from "../../domain/drafting/context.js";
 import {
@@ -34,7 +35,7 @@ import type { TrustTier } from "../../schemas/enums.js";
 import { normaliseTagSlug } from "../../schemas/tag.js";
 import { ToolError, type ToolContext } from "../registry.js";
 import { DRAFT_KEY, type DraftEnvelope, type PendingOccasion } from "./confirm-proposals.js";
-import { resolveProject } from "./project.js";
+import { projectShelfPath, resolveProject } from "./project.js";
 import { scopeRefFor } from "./session.js";
 import { readOwnerLine } from "./host-values.js";
 
@@ -116,14 +117,21 @@ export interface PreparedCandidate {
 export interface CandidateContext {
   material: Material;
   sessionDate: string;
+  /** The session the material is from: the one being extracted, else the one calling. */
+  sessionId: string | null;
   /** Lowercased, whitespace normalised material text, for the name gate. */
   text: string;
   vocabulary: ReadonlySet<string>;
 }
 
-export async function candidateContext(ctx: ToolContext, material: Material, sessionDate: string): Promise<CandidateContext> {
+export async function candidateContext(
+  ctx: ToolContext,
+  material: Material,
+  sessionDate: string,
+  sourceSession: string | null = null,
+): Promise<CandidateContext> {
   const vocabulary = new Set((await tagVocabulary(ctx.db)).map((tag) => tag.slug));
-  return { material, sessionDate, text: materialText(material), vocabulary };
+  return { material, sessionDate, sessionId: sourceSession ?? ctx.session.id, text: materialText(material), vocabulary };
 }
 
 /**
@@ -149,7 +157,7 @@ export async function prepareCandidate(
       "The quote does not appear in the material it was drafted from. A quote is copied exactly, at most 500 characters.",
     );
   }
-  const source = sourceFor(context.material, match, { sessionDate: context.sessionDate, sessionId: ctx.session.id });
+  const source = sourceFor(context.material, match, { sessionDate: context.sessionDate, sessionId: context.sessionId });
   const sourceTrust = match.trust;
   const external = isExternal(sourceTrust);
 
@@ -278,6 +286,10 @@ export async function prepareCandidate(
       throw error;
     }
   }
+
+  // A project memory the drafter gave no shelf goes to its project's shelf,
+  // shown in review as such, as memory.remember would put it.
+  if (candidate.shelf === null && candidate.scope === "project") shelf = await projectShelfPath(ctx.db, scopeRef);
 
   return {
     candidate,
@@ -447,9 +459,15 @@ function summaryFor(lead: string, prepared: PreparedCandidate): string {
   return parts.join(". ");
 }
 
-/** The group one session's drafts share. */
-export function sessionGroup(ctx: ToolContext, material: Material, sessionDate: string, job: string): ProposalGroup {
-  const key = ctx.session.id ?? shortDigest(material);
+/** The group one session's drafts share: the session extracted, else the one calling. */
+export function sessionGroup(
+  ctx: ToolContext,
+  material: Material,
+  sessionDate: string,
+  job: string,
+  sourceSession: string | null = null,
+): ProposalGroup {
+  const key = sourceSession ?? ctx.session.id ?? shortDigest(material);
   return {
     id: `session:${key}:${sessionDate}`,
     title: `Session of ${sessionDate}`,
@@ -491,11 +509,12 @@ async function duplicateOf(ctx: ToolContext, prepared: PreparedCandidate, index:
 
 export async function extractOutcome(
   ctx: ToolContext,
-  target: TargetOf<"extract"> & { sessionDate: string },
+  target: ExtractWithMaterial & { sessionDate: string },
   draft: ExtractDraft,
 ): Promise<DraftOutcome> {
-  const context = await candidateContext(ctx, target.material, target.sessionDate);
-  const session = sessionGroup(ctx, target.material, target.sessionDate, "extract");
+  const source = target.session ?? null;
+  const context = await candidateContext(ctx, target.material, target.sessionDate, source);
+  const session = sessionGroup(ctx, target.material, target.sessionDate, "extract", source);
   const outcome: DraftOutcome = { proposals: [], rejected: [], questions: draft.questions.map((q) => q.question) };
 
   for (const [index, candidate] of draft.candidates.entries()) {

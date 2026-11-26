@@ -18,11 +18,20 @@ import { TRUST_ORDER, type SourceKind, type TrustTier } from "../../schemas/enum
 /** Starting value: the most text one drafting call carries, all turns together. */
 export const MATERIAL_MAX_CHARS = 200_000;
 
+export const TURN_ROLES = ["user", "assistant", "tool", "note"] as const;
+export type TurnRole = (typeof TURN_ROLES)[number];
+
 export const turnSchema = z
   .object({
-    /** `user` is the owner, `assistant` the model, `tool` a tool result read into the session. */
-    role: z.enum(["user", "assistant", "tool"]),
+    /**
+     * `user` is the owner, `assistant` the model, `tool` a tool result read
+     * into the session, `note` a session note the assistant kept with
+     * memory.session_note (the model's words, not the owner's).
+     */
+    role: z.enum(TURN_ROLES),
     text: z.string().min(1).max(MATERIAL_MAX_CHARS),
+    /** When it was said, as the transcript gave it. Shown, never checked. */
+    at: z.string().max(40).optional(),
   })
   .strict();
 
@@ -78,18 +87,19 @@ export function normaliseWhitespace(text: string): string {
 export interface QuoteMatch {
   /** Index of the turn, or 0 for a file. */
   at: number;
-  role: "user" | "assistant" | "tool" | "file";
+  role: TurnRole | "file";
   trust: TrustTier;
 }
 
 /**
  * How trusted each part of the material is. The owner's turns are their own
  * words, `stated`. A model's turn is `inferred`: the owner did not say it. A
- * tool result is `external`. A file carries the trust the caller gave it.
+ * tool result is `external`. A session note is the model's own note,
+ * `inferred` like its turns. A file carries the trust the caller gave it.
  * Starting values.
  */
-export function turnTrust(role: "user" | "assistant" | "tool"): TrustTier {
-  return role === "user" ? "stated" : role === "assistant" ? "inferred" : "external";
+export function turnTrust(role: TurnRole): TrustTier {
+  return role === "user" ? "stated" : role === "assistant" || role === "note" ? "inferred" : "external";
 }
 
 
@@ -162,7 +172,7 @@ export function sourceFor(
   }
   return {
     kind: match.role === "tool" ? "tool_result" : "conversation",
-    label: `session of ${context.sessionDate}`,
+    label: match.role === "note" ? `session note of ${context.sessionDate}` : `session of ${context.sessionDate}`,
     ...(context.sessionId ? { uri: `session:${context.sessionId}` } : {}),
     occurredAt,
     trust: match.trust,

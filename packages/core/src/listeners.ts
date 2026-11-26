@@ -1,6 +1,6 @@
 import { linkOccasion, markOccasionUnavailable, memoriesForOccasion, participantsFrom, OCCASION_URI_PATTERN, PERSON_URI_PREFIX } from "./domain/occasions.js";
 import type { HostPorts, ListenedEventName } from "./ports.js";
-import { countSession, markReadyForExtraction, setTranscriptPointer } from "./tools/shared/host-values.js";
+import { endSession } from "./tools/shared/host-values.js";
 
 /**
  * The events this module listens to, docs/SPEC.md section 18 "Listened to",
@@ -81,10 +81,10 @@ export async function deliverEvent(
       const sessionId = text(payload, "sessionId", "id");
       if (!sessionId) return { event, handled: false, reason: "invalid_payload", detail: { expected: "sessionId" } };
       if (!ports.settings.values) return { event, handled: false, reason: "no_settings_values" };
-      const marked = await markReadyForExtraction(ports, sessionId);
-      const sessionsSince = marked ? await countSession(ports) : null;
-      const transcriptPath = text(payload, "transcriptPath");
-      const transcript = transcriptPath ? await setTranscriptPointer(ports, sessionId, transcriptPath) : false;
+      // One step in host.db: sessions ending together in several processes
+      // each land in the list and count once.
+      const ended = await endSession(ports, sessionId, text(payload, "transcriptPath"));
+      const { marked, sessionsSince, transcript } = ended;
       return {
         event,
         handled: true,

@@ -18,7 +18,7 @@ import type { TrustTier } from "../../schemas/enums.js";
 import { defineTool, ToolError, type ToolContext } from "../registry.js";
 import type { DraftedProvenance } from "../shared/confirm-drafted.js";
 import { enforceDiscipline, refuseFindings } from "../shared/discipline.js";
-import { resolveProject } from "../shared/project.js";
+import { projectShelfPath, resolveProject } from "../shared/project.js";
 import { buildRefs, personInputSchema } from "../shared/refs.js";
 import { capQuote, scopeRefFor, statedSource } from "../shared/session.js";
 import { memoryView, type MemoryView } from "../shared/views.js";
@@ -79,7 +79,7 @@ export type ParsedRememberInput = z.output<typeof rememberInputSchema>;
 
 export interface RememberResult {
   memory: MemoryView;
-  /** True when no shelf was given and it waits on Returns. */
+  /** True when no shelf was given and it waits on Returns. A project memory given none goes to its project's shelf instead. */
   landedOnReturns: boolean;
   /** Says where it landed when that was Returns. */
   notice: string | null;
@@ -173,8 +173,12 @@ export async function commitRemember(
     occasion: input.occasion ?? null,
     mentions: input.mentions,
   });
-  const landedOnReturns = input.shelf === undefined;
-  const shelf = input.shelf ?? ctx.config.defaultShelf;
+  // A project memory given no shelf goes to its project's shelf; anything
+  // else given none waits on Returns.
+  const projectShelf =
+    input.shelf === undefined && input.scope === "project" ? await projectShelfPath(ctx.db, scopeRef) : null;
+  const landedOnReturns = input.shelf === undefined && projectShelf === null;
+  const shelf = input.shelf ?? projectShelf ?? ctx.config.defaultShelf;
 
   // The vector is computed before the commit opens, never with the writer held.
   const vector = await prepareEmbedding(ctx, { title, body: input.body });
