@@ -112,7 +112,7 @@ To list it in a marketplace file you already maintain, add this to its
 | `/reverie:browse <shelf, dates, #tag>` | Walk the library in order |
 | `/reverie:review` | Go through what is waiting for your yes or no |
 | `/reverie:forget <call number>` | Permanently forget one memory |
-| `/reverie:dream` | Consolidation pass: duplicates, contradictions, stale entries |
+| `/reverie:dream` | Draft memories from finished sessions waiting for extraction, then a consolidation pass over duplicates, contradictions and stale entries. Both only propose: everything waits in review |
 | `/reverie:setup` | Sections, shelves, projects, and what to bring in |
 | `/reverie:open [shelf or call number]` | Start the host, or find the one running, and open the library UI |
 | `skills/reverie` | The procedure, including when to call Fellowship |
@@ -199,6 +199,77 @@ the built-in embedder, with the corpus hash, model, dim and date. The second
 adds a column for a local Ollama model already pulled (`--endpoint <url>` when
 it is not on its default port).
 
+## The npm package
+
+`pnpm pack:npm` builds everything and packs one publishable package,
+`@starside/reverie`, into `.npm-package/`. It is not published: that is a
+separate, deliberate `npm publish .npm-package`.
+
+```bash
+npx @starside/reverie mcp       # the 41 tools over stdio, for any MCP client
+npx @starside/reverie serve     # the UI and POST /rpc on 127.0.0.1:4329
+npx @starside/reverie status
+```
+
+The package carries the `reverie` binary, the built UI, `module.json`, the
+recall eval corpus (`reverie eval` reads it by default), and the workspace
+packages as bundled dependencies: core with its migrations and `fts.sql`, the
+mini-host, the markdown mirror, the transcripts connector and the memory tool
+adapter. Its npm dependencies install beside it. The Prisma client is
+generated at install (`postinstall` runs `prisma generate` against the schema
+core ships), so the query engine is the one for the machine it lands on; with
+pnpm, allow that build with `pnpm approve-builds`. Node 22.5 or later.
+
+`pnpm smoke:npm` proves it from the tarball, outside the workspace, in one
+temp folder with its own silo, host.db and npm cache: it installs the tarball
+into a fresh project, checks `reverie tools` lists 41, scores the packaged
+corpus with `reverie eval`, starts `reverie serve`
+on a free port and reads `/health` and the UI, speaks MCP to `reverie mcp`
+(initialize and tools/list), runs `npx --offline --package <tarball> reverie
+status`, then removes the folder. The first install fetches the declared
+dependencies from the registry; nothing else touches the network. It is not
+part of `pnpm test`.
+
+The Claude Code plugin does not use the npm package: `.mcp.json` and the hooks
+run `scripts/plugin-bootstrap.mjs` from the checkout, which builds it on first
+run.
+
+## The memory tool, for apps on the Anthropic API
+
+`packages/adapter-memory-tool` is a backend for the client-side memory tool
+(`{"type": "memory_20250818", "name": "memory"}`). The tool sees the library
+as files: `/memories/Life/Gatherings/2026-12-24-001.md` is
+`LIF/GTH/2026-12-24/001`. `view` reads through `memory.fs_view`; `create`
+queues a draft for review, or remembers at once when the app marks the turn as
+the owner's; `str_replace` and `insert` write a new version; `rename`
+reshelves and keeps the old number as an alias; `delete` retires. A model can
+never forget through it, every gate still applies, and every path that
+escapes `/memories` is refused before any tool runs. The handler takes one
+`tool_use` input and returns the `tool_result` text; it has no SDK dependency.
+The mapping, the file names and an SDK tool loop example are in
+[`packages/adapter-memory-tool/README.md`](packages/adapter-memory-tool/README.md).
+
+## The desktop app
+
+`apps/desktop` is a Tauri window over the same one process host `reverie
+serve` runs, lifted from Fellowship's. It starts the host with a bundled Node
+runtime, shows a splash until `/health` answers, then opens the UI on
+127.0.0.1. On quit it stops the host it started, by that process alone. A host
+already running the same code on port 4329 is reused; one running other code
+is named in the window and left alone. The window is granted no Tauri
+commands. The icons are generated from the UI's logo (`pnpm --filter
+@reverie/desktop icons`).
+
+You need Rust and the Tauri CLI (`cargo install tauri-cli`).
+
+```bash
+pnpm desktop:check   # assemble the bundle, then cargo check the shell
+pnpm desktop         # build Reverie.app under apps/desktop/src-tauri/target/release/bundle/macos/
+```
+
+The app opens the default silo, like `reverie serve`. Built and checked on
+macOS; a signed release bundle is not set up.
+
 ## Layout
 
 ```
@@ -221,9 +292,10 @@ off disk as turns, behind the host's `connectors` port, and
 `packages/adapter-markdown` reads and writes the markdown mirror and reads a
 Claude Code memory directory, behind the same port. `apps/reverie` is the binary (`serve`, `restart`, `mcp`,
 `status`, `tools`, `verify`, `import`, `export`, `reindex`, `dream`, `eval`, and
-`hook` for the plugin hooks). Run
-`pnpm install`, `pnpm test`, `pnpm build`, `pnpm db:check`. The rest of
-`packages/` and `apps/` in the spec is not written yet.
+`hook` for the plugin hooks). `packages/adapter-memory-tool` is the backend
+for Anthropic's memory tool, `apps/desktop` the Tauri shell, and
+`scripts/pack-npm.mjs` packs the npm package. Run `pnpm install`, `pnpm test`,
+`pnpm build`, `pnpm db:check`.
 
 ## Two manifests, on purpose
 

@@ -1,0 +1,21 @@
+[package]
+name = "reverie-desktop"
+version = "0.0.1"
+description = "Reverie, as a window over its own local host"
+license = "Apache-2.0"
+edition = "2021"
+# The toolchain this was built with. Cargo resolves dependency versions that
+# support it rather than demanding an upgrade of a toolchain the user owns.
+rust-version = "1.89"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

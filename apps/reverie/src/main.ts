@@ -542,9 +542,14 @@ function optionValues(argv: string[], name: string): string[] {
   return out;
 }
 
-/** The fixture corpus in a checkout: eval/corpus.json at the repository root. */
+/**
+ * The fixture corpus: eval/corpus.json beside dist in the npm package, else
+ * at the repository root in a checkout.
+ */
 export function defaultCorpusPath(): string {
   const here = dirname(fileURLToPath(import.meta.url));
+  const packaged = resolve(here, "..", "eval", "corpus.json");
+  if (existsSync(packaged)) return packaged;
   return resolve(here, "..", "..", "..", "eval", "corpus.json");
 }
 

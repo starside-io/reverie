@@ -15,6 +15,8 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  apps/desktop: {}
+
   apps/reverie:
     dependencies:
       '@reverie/core':
@@ -42,6 +44,25 @@ importers:
 
   packages/adapter-markdown:
     devDependencies:
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 5.1.1
+        version: 5.1.1(@types/node@26.6.6)(jsdom@31.0.1)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/adapter-memory-tool:
+    dependencies:
+      '@reverie/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@reverie/mini-host':
+        specifier: workspace:*
+        version: link:../mini-host
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6

@@ -1,0 +1,5 @@
+[resolver]
+# Pick the newest dependency versions that still build on rust-version, rather
+# than the newest outright: a desktop shell should not require a toolchain
+# upgrade on the machine building it.
+incompatible-rust-versions = "fallback"

@@ -1,0 +1,15 @@
+{
+  "name": "@reverie/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The double clickable app: a Tauri window over the same one process host the CLI runs.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "bundle": "node scripts/bundle.mjs",
+    "check": "node scripts/bundle.mjs && cargo check --manifest-path src-tauri/Cargo.toml",
+    "icons": "cd src-tauri && cargo tauri icon ../../../packages/ui/public/favicon.svg",
+    "app": "node scripts/bundle.mjs && cd src-tauri && cargo tauri build --bundles app",
+    "dev": "node scripts/bundle.mjs && cd src-tauri && cargo tauri dev"
+  }
+}

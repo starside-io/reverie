@@ -1,0 +1,6 @@
+# Assembled by scripts/bundle.mjs from the workspace build. Never edited by hand.
+src-tauri/binaries/
+src-tauri/resources/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/fingerprint
