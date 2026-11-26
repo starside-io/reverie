@@ -270,6 +270,11 @@ pnpm desktop         # build Reverie.app under apps/desktop/src-tauri/target/rel
 The app opens the default silo, like `reverie serve`. Built and checked on
 macOS; a signed release bundle is not set up.
 
+`.githooks/post-commit` rebuilds the app in the background after any commit
+that changes app code, then reopens the app if it was open and restarts a
+running `reverie serve`. Turn it on once per checkout with
+`git config core.hooksPath .githooks`. The log is `.git/rebuild-app.log`.
+
 ## Layout
 
 ```
