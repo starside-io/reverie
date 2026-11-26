@@ -1100,7 +1100,7 @@ describing are a starting reading of the name and are marked so.
 | `memory.redact` | `confirmedByUser: z.literal(true)`. Clears the content of past versions of a memory that stays. Starting reading. |
 | `memory.promote_procedure` | `confirmedByUser: z.literal(true)`. A procedure changes how every later session behaves, so it is the one kind a model can never write alone. Refused for an external source. |
 | `memory.merge` | `confirmedByUser: z.literal(true)`. Folds one memory into another, keeping both sets of sources and the absorbed number as an alias. The design names the tool without describing it; this reading is a starting one. |
-| `memory.import` | `confirmedByUser: z.literal(true)`. A snapshot, a markdown mirror folder, or a Claude Code memory directory. Replace mode names the row counts it will destroy. |
+| `memory.import` | `confirmedByUser: z.literal(true)`. A snapshot, a markdown mirror folder, or a Claude Code memory directory (with an optional `project`). Backs the silo up first. Replace mode names the row counts it will destroy. |
 | `memory.decide` | `confirmedByUser: z.literal(true)`. Confirming runs the tool the proposal names with the payload the owner read, and only a write that succeeded marks it confirmed. A proposal may not name `decide` or `propose_draft`. |
 
 ### Drafting, 2
@@ -1314,6 +1314,43 @@ so a file listing is already in order. Two-way: starting reading, an edit in the
 folder comes back through `import` as a new version, never an in-place write. A
 forgotten memory is absent from the mirror.
 
+Each file carries the whole memory in its front matter and the body below it.
+What has no file of its own lives in `.reverie/library.json`: sections, shelves,
+tags, projects by slug and repository, version history, links and every retired
+number. `.reverie/owned.json` lists the files the mirror wrote, with a hash each.
+The mirror never overwrites or deletes a file it does not own, so the owner's
+own notes can share the folder.
+
+| On import | Result |
+| --- | --- |
+| Unchanged file | Nothing. |
+| Edited file | A new version. An edit cannot raise trust or turn a memory into a procedure. |
+| Edited in the folder and in the library since the export | A conflict, reported and left alone. |
+| Missing file | Nothing. Only replace mode deletes, and the call number stays retired. |
+| A note with no id | Remembered at trust `stated`, on the shelf its folder names, else Returns. |
+| A file that does not parse | Reported for that file. The rest import. |
+
+`memory.export` writes the mirror with `to: "markdown"` and a `folder`. The
+backup of section 25 runs inside `memory.import`, so an import over MCP gets one
+too.
+
+### Import from a Claude Code memory directory
+
+Import once, read only. Reverie never writes into the directory.
+
+| Claude Code type | Kind | Scope |
+| --- | --- | --- |
+| `user` | fact | global |
+| `feedback` | procedure when both Why and How to apply are present, else preference | the named project |
+| `project` | fact | the named project |
+| `reference` | reference | the named project |
+
+Why and How to apply go into their own fields. `[[name]]` links stay in the body
+and become `elaborates` links. `MEMORY.md` is never imported. Memory and source
+land at trust `confirmed`, with a source of kind `import`. A second import of
+the same directory writes nothing, a file changed since is reported and left
+alone, and a memory forgotten in Reverie is never brought back.
+
 ### `module.json`, abridged
 
 ```json
@@ -1470,6 +1507,9 @@ model never forgets for you; consolidation proposes and never applies.**
 
 **The name is Reverie.** Settled, with the identity table at the top.
 
+**Claude Code's own memory is imported once and taken over.** Read only, never
+mirrored back, so there is one writer (section 19).
+
 ### Still open
 
 | Call | The trade |
@@ -1477,7 +1517,6 @@ model never forgets for you; consolidation proposes and never applies.**
 | Auto-accept | Off by default. With it off every inferred memory waits for you, and a queue that only grows gets ignored. With it on, low-stakes facts land after a week unchallenged at trust `inferred`. Procedures and sensitive categories never auto-accept. |
 | Starting sections | Work, Life, Craft, Reference and a front desk are a guess at the owner's building. Changing them later is cheap; codes are stable under rename. |
 | Kit timing | Copy now and extract at M4, or extract first and build on it. |
-| Claude Code's own memory | Import once and take over, or mirror both ways and live with two writers. |
 
 ### Not settled by the design
 
