@@ -6,8 +6,13 @@ import { fileURLToPath } from "node:url";
 import { storage, tools as coreTools } from "@reverie/core";
 import {
   HostAlreadyRunning,
+  APP_NAME,
   PARENT_PID_ENV,
+  REVERIE_VERSION,
+  desktopAppStatus,
   formatVerify,
+  installDesktopApp,
+  openDesktopApp,
   healthPid,
   hostLockPath,
   liveHostLock,
@@ -35,6 +40,7 @@ import { readStdin, runHook } from "./hook.js";
  *   reverie tools     the surface, one line each
  *   reverie restart   stop the running host and start it again on this code
  *   reverie hook      one Claude Code plugin hook, reading its JSON on stdin
+ *   reverie app       Reverie.app: status, install from the release, open
  *
  * plus the maintenance commands: verify, import, export, reindex, dream. Each
  * one goes through the registry or through a core storage function: none
@@ -91,6 +97,12 @@ export const USAGE = `reverie <command>
         [--endpoint <url>] The local endpoint, when not on its default port.
         [--corpus <file>]  Another corpus.
         [--out <folder>]   Write results.json and RESULTS.md there.
+  app [status|install|open]
+                           Reverie.app: whether it is installed, download
+                           the build attached to this version's GitHub
+                           release into ~/Applications (or REVERIE_APP_DIR),
+                           checked against its SHA-256, or open it. Apple
+                           Silicon only. Only install reaches the network.
   hook <event>             One Claude Code plugin hook: session-start,
                            pre-compact or session-end. Reads the hook JSON on
                            stdin, prints the hook payload or nothing, and
@@ -220,6 +232,9 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     case "eval":
       return evalCommand(argv, io);
 
+    case "app":
+      return desktopApp(argv[1] ?? "status", io);
+
     case "hook": {
       // stdout is the hook payload here, and a hook never fails the session:
       // runHook always answers 0, with its payload or with nothing.
@@ -238,6 +253,48 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       io.err(`Unknown command "${command}".\n\n${USAGE}`);
       return 2;
     }
+  }
+}
+
+/**
+ * The desktop app, for /reverie:open. Lifted from Fellowship's cli.ts.
+ * Installing downloads the build attached to the GitHub release for this
+ * build's version, and checks its hash before it replaces anything. Nothing
+ * here opens the silo.
+ */
+async function desktopApp(action: string, io: Io): Promise<number> {
+  const status = desktopAppStatus(io.env);
+  const version = REVERIE_VERSION;
+
+  switch (action) {
+    case "status": {
+      io.out(
+        [
+          `app        ${status.version ? `${status.version} at ${status.path}` : "not installed"}`,
+          `available  ${status.supported ? version : "none: the app is built for Apple Silicon Macs only"}`,
+          "",
+        ].join("\n"),
+      );
+      return 0;
+    }
+    case "install": {
+      io.out(`Downloading ${APP_NAME} ${version} from its GitHub release...\n`);
+      const result = await installDesktopApp({ version, env: io.env });
+      io.out(`${result.message}\n`);
+      return result.ok ? 0 : 1;
+    }
+    case "open": {
+      if (!status.version) {
+        io.out(`${APP_NAME} is not installed. Run: reverie app install\n`);
+        return 1;
+      }
+      await openDesktopApp(io.env);
+      io.out(`Opened ${APP_NAME} ${status.version}.\n`);
+      return 0;
+    }
+    default:
+      io.err(`Unknown app action "${action}". Use status, install or open.\n`);
+      return 2;
   }
 }
 

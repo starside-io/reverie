@@ -1,3 +1,4 @@
+export * from "./desktop-app.js";
 export * from "./host.js";
 export * from "./host-db.js";
 export * from "./host-lock.js";
@@ -6,5 +7,7 @@ export * from "./mcp.js";
 export * from "./rpc.js";
 export * from "./server.js";
 export * from "./session.js";
+export * from "./updates.js";
+export * from "./version.js";
 export * from "./verify.js";
 export * from "./models/index.js";

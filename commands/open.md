@@ -1,15 +1,37 @@
 ---
-description: Start the Reverie host, or find the one already running, and open the library in the browser
+description: Open Reverie, in its desktop app or in the browser
 argument-hint: [shelf or call number to open directly]
 allowed-tools:
   - Read
   - Bash
 ---
 
-Start Reverie, or find the host already running, and open the library UI in
-the browser. With `$ARGUMENTS`, open that shelf or that memory directly.
+Open the Reverie library for the owner, in Reverie.app or in the browser. With
+`$ARGUMENTS`, open that shelf or that memory directly.
 
-## What this command does
+The CLI is `node "${CLAUDE_PLUGIN_ROOT}/apps/reverie/dist/cli.js"`, called
+`reverie` below.
+
+## The desktop app first
+
+Without `$ARGUMENTS` (the app opens on the library), run `reverie app status`.
+
+- **The app is installed:** `reverie app open`. It starts its own host, or
+  reuses one already running on the same code. Report that it opened, and
+  stop. If `available` is newer than the installed version, offer once to
+  update it with `reverie app install`.
+- **Not installed, on an Apple Silicon Mac:** say in one line that the desktop
+  app is a download from the Reverie release on GitHub (about 290 MB once
+  unpacked), checked against its published SHA-256, and ask whether to
+  install it. On yes: `reverie app install`, then `reverie app open`. On no,
+  use the browser below.
+- **Not available** (any other machine), or the install failed: the browser.
+
+Never install the app without the owner's yes in this conversation: it is a
+download, and the only one this command makes. With `$ARGUMENTS`, skip the app
+and use the browser, which can open a shelf or a memory directly.
+
+## The browser
 
 1. Check whether a host is already up before starting a second one:
    `curl -s http://127.0.0.1:4329/health` (or the port in `REVERIE_PORT`). If
@@ -34,8 +56,9 @@ the browser. With `$ARGUMENTS`, open that shelf or that memory directly.
    - a shelf such as `LIF/GTH`: `http://127.0.0.1:4329/library/LIF/GTH`
    - a call number such as `LIF/GTH/2026-12-24/001`:
      `http://127.0.0.1:4329/memory/LIF/GTH/2026-12-24/001`
-   - `review`, `recall`, `timeline`, `tags` or `desk`: that screen, at
-     `/review`, `/recall`, `/timeline`, `/tags` or `/desk`
+   - `review`, `recall`, `timeline`, `tags`, `desk` or `settings`: that
+     screen, at `/review`, `/recall`, `/timeline`, `/tags`, `/desk` or
+     `/settings`
    - anything else: open the library and offer `/reverie:browse` for
      `$ARGUMENTS`.
 5. Report the URL opened, both file paths and the tool count, which

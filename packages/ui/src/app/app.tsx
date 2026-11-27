@@ -4,6 +4,7 @@ import { Library } from "@/app/screens/library";
 import { Memory } from "@/app/screens/memory";
 import { RecallInspector } from "@/app/screens/recall";
 import { Review } from "@/app/screens/review";
+import { Settings } from "@/app/screens/settings";
 import { Tags } from "@/app/screens/tags";
 import { Timeline } from "@/app/screens/timeline";
 import { useRoute } from "@/lib/router";
@@ -29,6 +30,7 @@ export function App() {
           {route.name === "review" ? <Review /> : null}
           {route.name === "recall" ? <RecallInspector /> : null}
           {route.name === "desk" ? <FrontDesk /> : null}
+          {route.name === "settings" ? <Settings /> : null}
           {route.name === "unknown" ? (
             <div className="py-20 text-center">
               <h1 className="font-heading text-xl font-semibold">Nothing at {route.path}</h1>

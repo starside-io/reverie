@@ -4,6 +4,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { describe, expect, it } from "vitest";
 
+import { HOST_TOOL_NAMES } from "../src/mcp.js";
 import { PACKAGE_ROOT } from "./fixtures/children.js";
 import { envFor, throwawayDir } from "./harness.js";
 
@@ -113,9 +114,13 @@ describe("one telling of a party, over stdio, with a people module stand-in", ()
     await client.connect(transport);
     try {
       const listed = await client.listTools();
-      expect(listed.tools).toHaveLength(41);
-      // Detection by tools: memory_* here, people_* on the stand-in.
-      expect(listed.tools.every((tool) => tool.name.startsWith("memory_"))).toBe(true);
+      // The 41 module tools, plus the 3 app_* tools the server adds itself.
+      expect(listed.tools).toHaveLength(41 + HOST_TOOL_NAMES.length);
+      // Detection by tools: memory_* here, people_* on the stand-in. The
+      // host's app_* tools are the only others, and name no module.
+      const hostTools = HOST_TOOL_NAMES as readonly string[];
+      expect(listed.tools.filter((tool) => !hostTools.includes(tool.name)).every((tool) => tool.name.startsWith("memory_"))).toBe(true);
+      expect(listed.tools.filter((tool) => tool.name.startsWith("memory_"))).toHaveLength(41);
 
       /* ---------- The owner told it: occasion first, then the memory. */
 

@@ -152,11 +152,12 @@ writeFileSync(
 A local-first memory library for one person and the assistants that work for
 them. Memories sit on shelves with a call number that places them in time,
 cross-reference by tag, and wait in review when a model drafted them. One
-SQLite file on your machine, no network.
+SQLite file on your machine, no network unless you turn on the plugin update
+check.
 
 \`\`\`bash
 npx @starside/reverie serve     # the app, at http://127.0.0.1:4329
-npx @starside/reverie mcp       # the MCP server, on stdio: 41 tools
+npx @starside/reverie mcp       # the MCP server, on stdio: 41 memory tools and 3 app tools
 npx @starside/reverie status    # where the files are and what is in them
 \`\`\`
 

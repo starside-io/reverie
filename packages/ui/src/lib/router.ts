@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * The router: seven screens, so the History API and a few regular
+ * The router: eight screens, so the History API and a few regular
  * expressions rather than a dependency. Lifted from Fellowship's router.ts.
  *
  * A call number is part of the path as it is written, slashes and all:
@@ -17,6 +17,7 @@ export type Route =
   | { name: "review" }
   | { name: "recall" }
   | { name: "desk" }
+  | { name: "settings" }
   | { name: "unknown"; path: string };
 
 const CODE = "[A-Z]{3}";
@@ -30,6 +31,7 @@ export function parseRoute(path: string): Route {
   if (clean === "/review") return { name: "review" };
   if (clean === "/recall") return { name: "recall" };
   if (clean === "/desk") return { name: "desk" };
+  if (clean === "/settings") return { name: "settings" };
 
   const section = new RegExp(`^/library/(${CODE})$`).exec(clean);
   if (section) return { name: "library", section: section[1] as string, shelf: null };
@@ -61,6 +63,8 @@ export function hrefOf(route: Route): string {
       return "/recall";
     case "desk":
       return "/desk";
+    case "settings":
+      return "/settings";
     default:
       return route.path;
   }

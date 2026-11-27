@@ -105,14 +105,15 @@ describe("the UI's imports", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("reaches the host only through /rpc and the review decision route", () => {
+  it("reaches the host only through /rpc, the review decision route, and the host's update and app routes", () => {
     const paths = new Set<string>();
     for (const file of files) {
       for (const match of readFileSync(file, "utf8").matchAll(/`\$\{BASE\}(\/[a-z]+)/g)) paths.add(match[1] as string);
     }
     expect([...paths].sort()).toEqual(["/host", "/rpc"]);
-    const client = readFileSync(join(srcRoot, "client.ts"), "utf8");
-    expect([...new Set(client.match(/\/host\/[a-z]+/g))]).toEqual(["/host/review"]);
+    // Code only, comments stripped: the /host routes client.ts actually calls.
+    const client = stripComments(readFileSync(join(srcRoot, "client.ts"), "utf8"));
+    expect([...new Set(client.match(/\/host\/[a-z]+/g))].sort()).toEqual(["/host/app", "/host/review", "/host/updates"]);
   });
 });
 

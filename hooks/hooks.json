@@ -1,5 +1,5 @@
 {
-  "description": "Builds a fresh plugin install in the background, adds the core block for this project at session start, asks the compaction summary to carry a reminder to save session notes, and marks a finished session as ready for extraction. Silent otherwise.",
+  "description": "Builds a fresh plugin install in the background, adds the core block for this project at session start (and, once the owner turned the update check on, offers a newer plugin release once per session), asks the compaction summary to carry a reminder to save session notes, and marks a finished session as ready for extraction. Silent otherwise.",
   "hooks": {
     "SessionStart": [
       {

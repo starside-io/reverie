@@ -11,6 +11,12 @@ const dir = mkdtempSync(join(tmpdir(), "reverie-env-"));
 process.env["REVERIE_DB_PATH"] = join(dir, "reverie.db");
 process.env["REVERIE_HOST_DB_PATH"] = join(dir, "host.db");
 
+// The same for the update check and the desktop app: Claude Code's own
+// folder (installed_plugins.json, the plugin cache) and the folder the app
+// installs into are throwaway ones, never ~/.claude or ~/Applications.
+process.env["CLAUDE_CONFIG_DIR"] = join(dir, "claude");
+process.env["REVERIE_APP_DIR"] = join(dir, "Applications");
+
 // Run inside a Claude Code session, the test process inherits that session's
 // id. The servers and hooks these tests start must not pick it up: each test
 // says which session it is in.

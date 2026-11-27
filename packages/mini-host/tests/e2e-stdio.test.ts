@@ -4,6 +4,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { describe, expect, it } from "vitest";
 
+import { HOST_TOOL_NAMES } from "../src/mcp.js";
 import { PACKAGE_ROOT } from "./fixtures/children.js";
 import { envFor, filesIn, throwawayDir } from "./harness.js";
 
@@ -51,8 +52,10 @@ describe("an assistant over stdio, with no UI", () => {
       expect(client.getServerVersion()).toMatchObject({ name: "reverie" });
       expect(client.getInstructions()).toContain("memory_recall");
 
+      // The 41 module tools, plus the 3 app_* tools the server adds itself.
       const listed = await client.listTools();
-      expect(listed.tools).toHaveLength(41);
+      expect(listed.tools).toHaveLength(41 + HOST_TOOL_NAMES.length);
+      expect(listed.tools.filter((tool) => tool.name.startsWith("memory_"))).toHaveLength(41);
 
       // Remember: what the owner states goes straight in.
       const made = payloadOf<{ memory: { id: string; call: string } }>(

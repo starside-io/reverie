@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -9,7 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { hostLockPath, liveHostLock, processAlive, serveMiniHost, startMiniHost } from "@reverie/mini-host";
+import { HOST_TOOL_NAMES, hostLockPath, liveHostLock, processAlive, serveMiniHost, startMiniHost } from "@reverie/mini-host";
 
 import { USAGE, run, type Io } from "../src/main.js";
 
@@ -362,7 +362,7 @@ describe("reverie serve and restart", () => {
 });
 
 describe("reverie mcp", () => {
-  it("serves the 41 tools over stdio", async () => {
+  it("serves the 41 module tools over stdio, plus the 3 host tools", async () => {
     const io = throwawayIo();
     const transport = new StdioClientTransport({
       command: process.execPath,
@@ -374,10 +374,52 @@ describe("reverie mcp", () => {
     const client = new Client({ name: "test-assistant", version: "0.0.1" });
     await client.connect(transport);
     try {
-      expect((await client.listTools()).tools).toHaveLength(41);
+      // The 41 tools of module.json, and the app_* tools the MCP server adds itself.
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toHaveLength(41 + HOST_TOOL_NAMES.length);
+      expect(names.filter((name) => name.startsWith("memory_"))).toHaveLength(41);
+      expect(names.filter((name) => !name.startsWith("memory_")).sort()).toEqual([...HOST_TOOL_NAMES].sort());
     } finally {
       await client.close();
     }
+  });
+});
+
+describe("reverie app", () => {
+  function withApp(io: Captured, version: string | null): string {
+    const apps = join(io.dir, "Applications");
+    if (version !== null) {
+      mkdirSync(join(apps, "Reverie.app", "Contents"), { recursive: true });
+      writeFileSync(
+        join(apps, "Reverie.app", "Contents", "Info.plist"),
+        `<plist><dict><key>CFBundleShortVersionString</key><string>${version}</string></dict></plist>`,
+      );
+    }
+    io.env = { ...io.env, REVERIE_APP_DIR: apps };
+    return join(apps, "Reverie.app");
+  }
+
+  it("status says where the app is and which version an install would bring, and opens no silo", async () => {
+    const io = throwawayIo();
+    const path = withApp(io, "0.0.0-older");
+    expect(await run(["app", "status"], io)).toBe(0);
+    expect(io.stdout).toContain(`app        0.0.0-older at ${path}`);
+    expect(io.stdout).toMatch(/available  (\d+\.\d+\.\d+|none: )/);
+    expect(existsSync(io.env["REVERIE_DB_PATH"]!)).toBe(false);
+
+    const missing = throwawayIo();
+    withApp(missing, null);
+    expect(await run(["app"], missing)).toBe(0);
+    expect(missing.stdout).toContain("app        not installed");
+  });
+
+  it("open refuses when there is no app, and an unknown action is a usage error", async () => {
+    const io = throwawayIo();
+    withApp(io, null);
+    expect(await run(["app", "open"], io)).toBe(1);
+    expect(io.stdout).toContain("Reverie.app is not installed. Run: reverie app install");
+    expect(await run(["app", "nope"], io)).toBe(2);
+    expect(io.stderr).toContain('Unknown app action "nope"');
   });
 });
 

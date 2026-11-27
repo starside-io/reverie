@@ -1,16 +1,18 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { SessionInfo } from "@reverie/core";
 
 import type { MiniHost } from "../src/host.js";
-import { createMcpServer, mcpName } from "../src/mcp.js";
+import { HOST_TOOL_NAMES, createMcpServer, mcpName } from "../src/mcp.js";
 import { sessionFromEnvironment } from "../src/session.js";
+import { REVERIE_VERSION } from "../src/version.js";
 import { auditText, throwawayHost } from "./harness.js";
 
 /**
@@ -43,16 +45,25 @@ const manifest = JSON.parse(
 ) as { tools: Record<string, string[]> };
 
 describe("the stdio server", () => {
-  it("advertises exactly the 41 tools of module.json, with dots mapped to underscores", async () => {
+  it("advertises exactly the 41 tools of module.json, with dots mapped to underscores, plus the 3 host tools", async () => {
     const host = await throwawayHost();
     const { client, close } = await connect(host);
     try {
       const listed = await client.listTools();
-      expect(listed.tools).toHaveLength(41);
+      // 41 module tools from module.json, and the host's own app_* tools,
+      // which belong to this server and are in no manifest.
+      expect(listed.tools).toHaveLength(41 + HOST_TOOL_NAMES.length);
+      expect(HOST_TOOL_NAMES).toEqual(["app_status", "app_install", "app_open"]);
 
-      const names = listed.tools.map((tool) => tool.name).sort();
+      const all = listed.tools.map((tool) => tool.name);
+      const names = all.filter((name) => !(HOST_TOOL_NAMES as readonly string[]).includes(name)).sort();
       const declared = Object.values(manifest.tools).flat().map(mcpName).sort();
+      expect(declared).toHaveLength(41);
       expect(names).toEqual(declared);
+      expect(all.filter((name) => (HOST_TOOL_NAMES as readonly string[]).includes(name)).sort()).toEqual(
+        [...HOST_TOOL_NAMES].sort(),
+      );
+      expect(declared.some((name) => name.startsWith("app_"))).toBe(false);
       expect(names.some((name) => name.includes("."))).toBe(false);
       expect(mcpName("memory.fs_view")).toBe("memory_fs_view");
 
@@ -229,5 +240,139 @@ describe("the session from the environment", () => {
     expect(a.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(a.id).not.toBe(b.id);
     expect(a.agent).toBeNull();
+  });
+});
+
+describe("the host's app tools", () => {
+  /** A server whose app tools see a throwaway app folder, a stand in GitHub and no real `open`. */
+  async function connectWithApp(host: MiniHost, app: NonNullable<Parameters<typeof createMcpServer>[1]>["app"]) {
+    const server = createMcpServer(host, { session: SESSION, ...(app ? { app } : {}) });
+    const client = new Client({ name: "test-assistant", version: "0.0.1" });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    return { client, close: async () => void (await Promise.all([client.close(), server.close()])) };
+  }
+
+  function appFolder(): NodeJS.ProcessEnv {
+    return { REVERIE_APP_DIR: mkdtempSync(join(tmpdir(), "reverie-apps-")) };
+  }
+
+  function bundle(at: string, version: string) {
+    mkdirSync(join(at, "Contents"), { recursive: true });
+    writeFileSync(
+      join(at, "Contents", "Info.plist"),
+      `<plist><dict><key>CFBundleShortVersionString</key><string>${version}</string></dict></plist>`,
+    );
+  }
+
+  it("are listed with their schemas, and the instructions name them", async () => {
+    const host = await throwawayHost();
+    const { client, close } = await connectWithApp(host, { env: appFolder() });
+    try {
+      const listed = await client.listTools();
+      const install = listed.tools.find((tool) => tool.name === "app_install");
+      expect(install?.inputSchema.required).toEqual(["confirmedByUser"]);
+      expect(install?.annotations?.openWorldHint).toBe(true);
+      expect(listed.tools.find((tool) => tool.name === "app_status")?.annotations?.readOnlyHint).toBe(true);
+      expect(client.getInstructions()).toContain("app_open");
+      expect(client.getInstructions()).toContain("app_install");
+      expect(client.getServerVersion()).toMatchObject({ name: "reverie", version: REVERIE_VERSION });
+    } finally {
+      await close();
+      await host.close();
+    }
+  });
+
+  it("app_status reads the app folder and reaches no network", async () => {
+    const host = await throwawayHost();
+    const env = appFolder();
+    bundle(join(env["REVERIE_APP_DIR"]!, "Reverie.app"), "0.0.0-older");
+    const fetch = vi.fn() as unknown as typeof globalThis.fetch;
+    const { client, close } = await connectWithApp(host, { env, fetch, supported: true });
+    try {
+      const status = payloadOf<Record<string, unknown>>(await client.callTool({ name: "app_status", arguments: {} }));
+      expect(status).toMatchObject({
+        supported: true,
+        version: "0.0.0-older",
+        available: REVERIE_VERSION,
+        behind: true,
+        path: join(env["REVERIE_APP_DIR"]!, "Reverie.app"),
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      await close();
+      await host.close();
+    }
+  });
+
+  it("app_install refuses without confirmedByUser, and downloads nothing", async () => {
+    const host = await throwawayHost();
+    const fetch = vi.fn() as unknown as typeof globalThis.fetch;
+    const { client, close } = await connectWithApp(host, { env: appFolder(), fetch, supported: true });
+    try {
+      for (const args of [{}, { confirmedByUser: false }, { confirmedByUser: "yes" }]) {
+        const result = (await client.callTool({ name: "app_install", arguments: args })) as { isError?: boolean };
+        expect(result.isError).toBe(true);
+        expect(payloadOf<{ message: string }>(result).message).toMatch(/^refused/);
+      }
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      await close();
+      await host.close();
+    }
+  });
+
+  it("app_install with the owner's yes asks for this server's own release", async () => {
+    const host = await throwawayHost();
+    const fetch = vi.fn(async () => new Response("{}", { status: 404 })) as unknown as typeof globalThis.fetch &
+      ReturnType<typeof vi.fn>;
+    const { client, close } = await connectWithApp(host, { env: appFolder(), fetch, supported: true });
+    try {
+      const result = await client.callTool({ name: "app_install", arguments: { confirmedByUser: true } });
+      expect(payloadOf<{ ok: boolean; message: string }>(result)).toMatchObject({ ok: false });
+      expect(String(fetch.mock.calls[0]![0])).toBe(
+        `https://api.github.com/repos/starside-io/reverie/releases/tags/v${REVERIE_VERSION}`,
+      );
+    } finally {
+      await close();
+      await host.close();
+    }
+  });
+
+  it("app_open opens an installed app, says when there is none, and writes no audit line", async () => {
+    const host = await throwawayHost();
+    const env = appFolder();
+    const open = vi.fn(async () => undefined);
+    const { client, close } = await connectWithApp(host, { env, open, supported: true });
+    try {
+      const missing = payloadOf<{ opened: boolean; message: string }>(await client.callTool({ name: "app_open", arguments: {} }));
+      expect(missing.opened).toBe(false);
+      expect(missing.message).toContain("app_install");
+      expect(open).not.toHaveBeenCalled();
+
+      bundle(join(env["REVERIE_APP_DIR"]!, "Reverie.app"), REVERIE_VERSION);
+      const opened = payloadOf<{ opened: boolean }>(await client.callTool({ name: "app_open", arguments: {} }));
+      expect(opened.opened).toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(host.store.listAudit()).toEqual([]);
+    } finally {
+      await close();
+      await host.close();
+    }
+  });
+
+  it("app_open on a machine the app is not built for points at the browser", async () => {
+    const host = await throwawayHost();
+    const open = vi.fn(async () => undefined);
+    const { client, close } = await connectWithApp(host, { env: appFolder(), open, supported: false });
+    try {
+      const answer = payloadOf<{ opened: boolean; message: string }>(await client.callTool({ name: "app_open", arguments: {} }));
+      expect(answer.opened).toBe(false);
+      expect(answer.message).toContain("reverie serve");
+      expect(open).not.toHaveBeenCalled();
+    } finally {
+      await close();
+      await host.close();
+    }
   });
 });

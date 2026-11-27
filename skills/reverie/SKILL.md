@@ -8,7 +8,8 @@ description: Work with Reverie, the local-first memory library for the user and 
 A memory library for one person. Memories sit on shelves inside sections, each
 with a call number that places it in time, any number of tags that
 cross-reference it, and a link into Fellowship when people were involved. One
-SQLite file, no network.
+SQLite file, no network (the plugin update check is the one exception, and stays
+off until the owner turns it on in Settings).
 
 Read [`docs/SPEC.md`](../../docs/SPEC.md) for the whole design. This skill is
 the procedure for using it.

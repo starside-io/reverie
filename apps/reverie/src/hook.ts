@@ -6,7 +6,9 @@ import {
   AGENT_ENV,
   CLAUDE_SESSION_ID_ENV,
   SESSION_ID_ENV,
+  checkForUpdates,
   gitRemoteOf,
+  readUpdatesEnabled,
   resolveHostDbPath,
   startMiniHost,
   type MiniHost,
@@ -21,7 +23,10 @@ import {
  *                  and one line when review items, finished sessions to
  *                  extract, or a consolidation wait. Runs no search.
  *                  hooks/hooks.json runs it on startup, resume, clear and
- *                  compact, so the block is back after each of them.
+ *                  compact, so the block is back after each of them. On
+ *                  startup only, and only once the owner turned the update
+ *                  check on, one more line when a newer plugin release is
+ *                  out (see updateOffer).
  *   pre-compact    reminds the model, through the compaction summary, to put
  *                  anything worth keeping into memory_session_note. Writes
  *                  nothing.
@@ -79,6 +84,8 @@ export interface HookIo {
   env: NodeJS.ProcessEnv;
   cwd: string;
   out(text: string): void;
+  /** The update check's request, for a test. Defaults to the global fetch. */
+  fetch?: typeof fetch;
 }
 
 function str(value: unknown): string | null {
@@ -159,7 +166,46 @@ export const INCOGNITO_LINE =
   "Reverie: incognito is on, so nothing is written this session (no memory, no note, no proposal). Reads still answer.";
 
 async function sessionStart(io: HookIo, input: HookInput): Promise<string> {
-  if (!libraryExists(io.env)) return "";
+  const [library, update] = await Promise.all([libraryContext(io, input), updateOffer(io, input)]);
+  const parts = [library, update].filter((part): part is string => part !== null && part.length > 0);
+  return parts.length > 0 ? hookContext(parts.join("\n\n")) : "";
+}
+
+/**
+ * The update half of the session start hook. Lifted from Fellowship's
+ * updateOffer in cli.ts. Silent unless the owner turned the check on and a
+ * newer release than the installed plugin is out. The answer is cached beside
+ * host.db for a day, so most sessions never reach the network, and a slow
+ * GitHub costs at most the fetch timeout, inside the hook's deadline.
+ *
+ * Once per session: Fellowship runs its hook on startup alone, while this one
+ * also runs on resume, clear and compact to bring the core block back, so the
+ * offer is made only when Claude Code says the session started (source
+ * "startup", or no source at all).
+ */
+async function updateOffer(io: HookIo, input: HookInput): Promise<string | null> {
+  const source = str(input["source"]);
+  if (source !== null && source !== "startup") return null;
+  try {
+    const hostDbPath = resolveHostDbPath(io.env);
+    // Off reads nothing more: not Claude Code's records, not the network.
+    if (!readUpdatesEnabled(hostDbPath)) return null;
+    const status = await checkForUpdates({
+      enabled: true,
+      hostDbPath,
+      env: io.env,
+      ...(io.fetch ? { fetch: io.fetch } : {}),
+    });
+    if (!status.updateAvailable || !status.installed || !status.latest) return null;
+    return `Reverie: version ${status.latest.version} of the plugin is out (${status.installed.version} is installed). Release notes: ${status.latest.url}. When it fits the conversation, offer once to update it: run \`${status.command}\`, or press Install in the Reverie app's Settings, then restart Claude Code to load it. Do not push if the owner is busy with something else.`;
+  } catch {
+    return null;
+  }
+}
+
+/** The library half: the core block and what waits, or null for silence. */
+async function libraryContext(io: HookIo, input: HookInput): Promise<string | null> {
+  if (!libraryExists(io.env)) return null;
   const session = hookSession(io, input);
 
   return withHost(io.env, async (host) => {
@@ -184,7 +230,7 @@ async function sessionStart(io: HookIo, input: HookInput): Promise<string> {
     const held = core.included.some((item) => ["owner", "procedures", "pinned", "project"].includes(item.slot));
     const active = stats.byState["active"] ?? 0;
     const empty = !held && active === 0 && pending === 0 && !due && ready === 0;
-    if (empty) return config.incognito ? hookContext(INCOGNITO_LINE) : "";
+    if (empty) return config.incognito ? INCOGNITO_LINE : null;
 
     const waiting: string[] = [];
     if (pending > 0) waiting.push(`${pending} ${pending === 1 ? "proposal waits" : "proposals wait"} in review (/reverie:review).`);
@@ -196,7 +242,7 @@ async function sessionStart(io: HookIo, input: HookInput): Promise<string> {
     const parts = [SESSION_START_LEAD, core.text];
     if (waiting.length > 0) parts.push(`Reverie: ${waiting.join(" ")}`);
     if (config.incognito) parts.push(INCOGNITO_LINE);
-    return hookContext(parts.join("\n\n"));
+    return parts.join("\n\n");
   });
 }
 

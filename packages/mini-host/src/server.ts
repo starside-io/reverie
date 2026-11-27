@@ -16,13 +16,23 @@ import {
   releaseHostLock,
   updateHostLock,
 } from "./host-lock.js";
+import { desktopAppStatus, installDesktopApp, type AppInstallSeams } from "./desktop-app.js";
 import { ownerGuard } from "./guard.js";
 import { rpcRoutes } from "./rpc.js";
+import {
+  UPDATES_SETTING,
+  checkForUpdates,
+  installUpdate,
+  type CommandRunner,
+  type UpdateOptions,
+} from "./updates.js";
+import { REVERIE_VERSION } from "./version.js";
 
 /**
  * The HTTP surface: /rpc for the module, and /host for the things that belong
  * to the host rather than to the memory module: the review queue, the audit
- * log, the event feed and the config. Lifted from Fellowship's server.ts,
+ * log, the event feed, the config, the opt-in update check and the desktop
+ * app install. Lifted from Fellowship's server.ts,
  * without the media route, the avatar preview and the drafter routes, which
  * Reverie does not have. The built UI is served from disk when there is one
  * (uiDir, or REVERIE_UI_DIR), and every other path falls back to its
@@ -54,6 +64,24 @@ export const UI_DIR_ENV = "REVERIE_UI_DIR";
 export interface AppOptions {
   /** The built UI. Omitted, or missing on disk, serves NO_UI_TEXT on `/` instead. */
   uiDir?: string;
+  /** Seams for the update check and the app install, so a test reaches neither GitHub nor the claude CLI. */
+  updates?: UpdateOptions & {
+    run?: CommandRunner;
+    claudePath?: string | null;
+    app?: Omit<AppInstallSeams, "fetch">;
+  };
+}
+
+const EXPECTED_JSON = "Expected a JSON request with content-type application/json.";
+
+/**
+ * The update and app routes take JSON only, as /rpc does in the guard: a
+ * browser cannot send a cross-origin JSON post without a preflight, which this
+ * host never answers. The guard has already refused a write from another
+ * origin; this is the second lock on routes that run a command or download.
+ */
+function isJson(contentType: string | undefined): boolean {
+  return (contentType ?? "").toLowerCase().startsWith("application/json");
 }
 
 export function createApp(host: MiniHost, options: AppOptions = {}): Hono {
@@ -162,6 +190,78 @@ export function createApp(host: MiniHost, options: AppOptions = {}): Hono {
         400,
       );
     }
+  });
+
+  /**
+   * The plugin update check. Off until the owner turns it on; see updates.ts
+   * for what it sends and where the answer is cached. Lifted from
+   * Fellowship's server.ts, with one change: a refresh that skips the cache
+   * is POST /updates/check rather than GET /updates?refresh=1, so a page on
+   * another origin cannot make this host call GitHub (the guard lets a
+   * cross-origin GET through, since it cannot read the answer).
+   */
+  const updates = options.updates ?? {};
+  const { app: appSeams, ...updateSeams } = updates;
+  const updatesEnabled = () => host.store.readSetting(UPDATES_SETTING) === true;
+  const updateStatus = (force: boolean) =>
+    checkForUpdates({ ...updateSeams, enabled: updatesEnabled(), hostDbPath: host.hostPath, force });
+
+  hostRoutes.get("/updates", async (context) => context.json(await updateStatus(false)));
+
+  hostRoutes.post("/updates/check", async (context) => {
+    if (!isJson(context.req.header("content-type"))) return context.json({ error: EXPECTED_JSON }, 415);
+    return context.json(await updateStatus(true));
+  });
+
+  hostRoutes.post("/updates/settings", async (context) => {
+    if (!isJson(context.req.header("content-type"))) return context.json({ error: EXPECTED_JSON }, 415);
+    const body = (await context.req.json().catch(() => null)) as { enabled?: unknown } | null;
+    if (typeof body?.enabled !== "boolean") {
+      return context.json({ error: "Expected { enabled: true | false }" }, 400);
+    }
+    host.store.writeSetting(UPDATES_SETTING, body.enabled);
+    return context.json(await updateStatus(body.enabled));
+  });
+
+  /** Runs claude plugin update, and brings an installed Reverie.app along. */
+  hostRoutes.post("/updates/install", async (context) => {
+    if (!isJson(context.req.header("content-type"))) {
+      return context.json({ ok: false, message: EXPECTED_JSON }, 415);
+    }
+    const result = await installUpdate({
+      ...(updateSeams.env ? { env: updateSeams.env } : {}),
+      ...(updateSeams.run ? { run: updateSeams.run } : {}),
+      ...(updateSeams.claudePath === undefined ? {} : { claudePath: updateSeams.claudePath }),
+      app: { ...appSeams, ...(updateSeams.fetch ? { fetch: updateSeams.fetch } : {}) },
+    });
+    return context.json(result, result.ok ? 200 : 502);
+  });
+
+  /**
+   * Reverie.app, installed on request: the build attached to the release
+   * that matches this host's own version.
+   */
+  const appEnv = updateSeams.env ?? process.env;
+
+  hostRoutes.get("/app", (context) =>
+    context.json({
+      ...desktopAppStatus(appEnv),
+      ...(appSeams?.supported === undefined ? {} : { supported: appSeams.supported }),
+      available: REVERIE_VERSION,
+    }),
+  );
+
+  hostRoutes.post("/app/install", async (context) => {
+    if (!isJson(context.req.header("content-type"))) {
+      return context.json({ ok: false, message: EXPECTED_JSON }, 415);
+    }
+    const result = await installDesktopApp({
+      version: REVERIE_VERSION,
+      env: appEnv,
+      ...(updateSeams.fetch ? { fetch: updateSeams.fetch } : {}),
+      ...appSeams,
+    });
+    return context.json(result, result.ok ? 200 : 502);
   });
 
   app.route("/host", hostRoutes);

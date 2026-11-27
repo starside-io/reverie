@@ -198,6 +198,68 @@ describe("reverie hook session-start", () => {
   });
 });
 
+describe("reverie hook session-start, the update offer", () => {
+  /**
+   * Claude Code's record of the plugin, in a throwaway CLAUDE_CONFIG_DIR, and
+   * a fetch that fails the test if it is called: the offer reads the cached
+   * answer beside host.db, written here as fresh, and nothing reaches GitHub.
+   */
+  function withPlugin(io: Captured, version: string): void {
+    const claude = join(io.dir, "claude");
+    mkdirSync(join(claude, "plugins"), { recursive: true });
+    writeFileSync(
+      join(claude, "plugins", "installed_plugins.json"),
+      JSON.stringify({ plugins: { "reverie@reverie": [{ scope: "user", version, installPath: "/x" }] } }),
+    );
+    io.env = { ...io.env, CLAUDE_CONFIG_DIR: claude };
+    io.fetch = (async () => {
+      throw new Error("the hook reached the network");
+    }) as typeof fetch;
+  }
+
+  function cachedRelease(io: Captured, tag: string): void {
+    writeFileSync(
+      join(io.dir, "update-check.json"),
+      JSON.stringify({
+        checkedAt: new Date().toISOString(),
+        latest: { version: tag.replace(/^v/, ""), tag, url: `https://github.com/starside-io/reverie/releases/tag/${tag}`, publishedAt: null },
+        error: null,
+      }),
+    );
+  }
+
+  it("says nothing about updates while the check is off, whatever the cache holds", async () => {
+    const io = throwaway();
+    await withHost(io, async () => undefined);
+    withPlugin(io, "0.0.1");
+    cachedRelease(io, "v0.0.2");
+    expect(await hook("session-start", input("SessionStart", io, { source: "startup" }), io)).toEqual({ code: 0, stdout: "" });
+  });
+
+  it("offers a newer release once the owner turned the check on, at startup only", async () => {
+    const io = throwaway();
+    await withHost(io, async (host) => host.store.writeSetting("updates.check", true));
+    withPlugin(io, "0.0.1");
+    cachedRelease(io, "v0.0.2");
+
+    const context = contextOf((await hook("session-start", input("SessionStart", io, { source: "startup" }), io)).stdout);
+    expect(context).toMatch(/^Reverie: version 0\.0\.2 of the plugin is out \(0\.0\.1 is installed\)/);
+    expect(context).toContain("claude plugin marketplace update reverie && claude plugin update reverie@reverie");
+
+    for (const source of ["resume", "clear", "compact"]) {
+      expect((await hook("session-start", input("SessionStart", io, { source }), io)).stdout, source).toBe("");
+    }
+  });
+
+  it("offers nothing when the installed plugin is current", async () => {
+    const io = throwaway();
+    await withHost(io, async (host) => host.store.writeSetting("updates.check", true));
+    withPlugin(io, "0.0.2");
+    cachedRelease(io, "v0.0.2");
+    expect((await hook("session-start", input("SessionStart", io, { source: "startup" }), io)).stdout).toBe("");
+  });
+});
+
 describe("reverie hook pre-compact", () => {
   it("asks the compaction summary to carry the session note reminder, and writes nothing", async () => {
     const io = throwaway();

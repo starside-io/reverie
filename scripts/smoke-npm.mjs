@@ -13,10 +13,11 @@
 // declared dependencies on the first install; the npx run after it is
 // --offline from that same cache. It checks:
 //
-//   reverie tools      lists 41 tools
+//   reverie tools      lists the 41 module tools
 //   reverie eval       scores the corpus the package carries
-//   reverie serve      on a free port other than 4329 answers /health and serves the UI
-//   reverie mcp        answers initialize and tools/list over stdio, with 41 tools
+//   reverie serve      on a free port other than 4329 answers /health (41 module tools) and serves the UI
+//   reverie mcp        answers initialize and tools/list over stdio: the 41 module tools
+//                      (memory_*) plus the 3 host tools the MCP server adds (app_*)
 //   npx reverie status through npx --package <tarball>, offline
 //
 // The server is stopped by the pid listening on its port, with a plain
@@ -32,7 +33,10 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packDir = join(root, ".npm-package");
 const keep = process.argv.includes("--keep");
+/** The module's tools, as module.json declares them. */
 const TOOLS = 41;
+/** The MCP server's own tools, beside the module's. They are in no manifest. */
+const HOST_TOOLS = ["app_install", "app_open", "app_status"];
 const DEFAULT_PORT = 4329;
 const realSilo = join(homedir(), "Library", "Application Support", "reverie");
 const realSiloBefore = existsSync(realSilo);
@@ -65,6 +69,9 @@ const env = {
   ...process.env,
   REVERIE_DB_PATH: join(silo, "reverie.db"),
   REVERIE_HOST_DB_PATH: join(silo, "host.db"),
+  // The update check and the app install look here, never in ~/.claude or ~/Applications.
+  CLAUDE_CONFIG_DIR: join(temp, "claude"),
+  REVERIE_APP_DIR: join(temp, "Applications"),
   npm_config_cache: join(temp, "npm-cache"),
   npm_config_update_notifier: "false",
   npm_config_fund: "false",
@@ -205,7 +212,15 @@ try {
   // 6. reverie mcp
   const mcp = await mcpSession(bin);
   check(mcp.initialize?.result?.serverInfo !== undefined, `reverie mcp answers initialize (${mcp.initialize.result.serverInfo.name} ${mcp.initialize.result.serverInfo.version})`);
-  check(mcp.list?.result?.tools?.length === TOOLS, `reverie mcp lists ${mcp.list.result.tools.length} tools over stdio`);
+  const listed = (mcp.list?.result?.tools ?? []).map((tool) => tool.name);
+  check(listed.length === TOOLS + HOST_TOOLS.length, `reverie mcp lists ${listed.length} tools over stdio (${TOOLS} module + ${HOST_TOOLS.length} host)`);
+  check(listed.filter((name) => name.startsWith("memory_")).length === TOOLS, `${TOOLS} of them are the module's memory_* tools`);
+  check(
+    JSON.stringify(listed.filter((name) => !name.startsWith("memory_")).sort()) === JSON.stringify(HOST_TOOLS),
+    `the others are exactly the host's ${HOST_TOOLS.join(", ")}`,
+  );
+  const packageVersion = JSON.parse(execFileSync("tar", ["-xOzf", tarball, "package/package.json"], { encoding: "utf8" })).version;
+  check(mcp.initialize.result.serverInfo.version === packageVersion, `reverie mcp reports the package version (${packageVersion})`);
 
   // 7. The npx path, offline, from the cache the install filled.
   const status = execFileSync("npx", ["--offline", "--yes", "--package", tarball, "reverie", "status"], {

@@ -13,6 +13,11 @@
  * the yes the flag stands for. A decision with parts (an occasion or a note
  * riding inside a proposal, decided one by one) goes over /rpc to
  * memory.decide instead, since the host route takes no parts.
+ *
+ * The other calls that leave /rpc are the host's own, not the module's: the
+ * opt-in plugin update check (/host/updates) and the desktop app
+ * (/host/app), behind the Settings screen and the rail line. Lifted from
+ * Fellowship's client.ts. Their writes are JSON posts, as /rpc is.
  */
 
 export type ToolErrorCode =
@@ -134,5 +139,94 @@ export const host = {
       ok: false,
       message: typeof error === "string" ? error : (error?.message ?? `The host answered ${response.status}`),
     };
+  },
+};
+
+/** The plugin update check. Mirrors UpdateStatus in mini-host's updates.ts. */
+export interface UpdateStatus {
+  enabled: boolean;
+  installed: {
+    pluginId: string;
+    marketplace: string;
+    version: string;
+    scope: string;
+    installPath: string | null;
+  } | null;
+  latest: { version: string; tag: string; url: string; publishedAt: string | null } | null;
+  updateAvailable: boolean;
+  checkedAt: string | null;
+  error: string | null;
+  command: string | null;
+}
+
+export interface DesktopAppStatus {
+  supported: boolean;
+  path: string;
+  /** The installed app's version, null when it is not installed. */
+  version: string | null;
+  /** The version an install would fetch: the host's own. */
+  available: string;
+}
+
+export interface InstallResult {
+  ok: boolean;
+  message: string;
+  output: string;
+  command: string | null;
+}
+
+export interface AppInstallResult {
+  ok: boolean;
+  message: string;
+  version: string | null;
+}
+
+type HostPath = `/host/${string}`;
+
+async function hostGet<T>(path: HostPath): Promise<T> {
+  const response = await fetch(`${BASE}${path}`);
+  if (!response.ok) throw new Error(`The host answered ${response.status}`);
+  return (await response.json()) as T;
+}
+
+/** A JSON post; the answer is read whatever the status, since a failure says what to do instead. */
+async function hostPost<T>(path: HostPath, body: unknown): Promise<{ status: number; body: T | null }> {
+  const response = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return { status: response.status, body: (await response.json().catch(() => null)) as T | null };
+}
+
+export const updates = {
+  /** Never reaches the network while the check is off, and at most once a day while it is on. */
+  status: () => hostGet<UpdateStatus>("/host/updates"),
+
+  /** Asks GitHub now, past the day long cache. */
+  async check(): Promise<UpdateStatus> {
+    const answer = await hostPost<UpdateStatus>("/host/updates/check", {});
+    if (!answer.body || answer.status !== 200) throw new Error(`The host answered ${answer.status}`);
+    return answer.body;
+  },
+
+  async setEnabled(enabled: boolean): Promise<UpdateStatus> {
+    const answer = await hostPost<UpdateStatus>("/host/updates/settings", { enabled });
+    if (!answer.body || answer.status !== 200) throw new Error(`The host answered ${answer.status}`);
+    return answer.body;
+  },
+
+  /** Runs claude plugin update on the host. The answer says what happened either way. */
+  async install(): Promise<InstallResult> {
+    const answer = await hostPost<InstallResult>("/host/updates/install", {});
+    return answer.body ?? { ok: false, message: `The host answered ${answer.status}`, output: "", command: null };
+  },
+
+  app: () => hostGet<DesktopAppStatus>("/host/app"),
+
+  /** Downloads the desktop app from the release; the answer says what happened either way. */
+  async installApp(): Promise<AppInstallResult> {
+    const answer = await hostPost<AppInstallResult>("/host/app/install", {});
+    return answer.body ?? { ok: false, message: `The host answered ${answer.status}`, version: null };
   },
 };

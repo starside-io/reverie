@@ -1,6 +1,7 @@
-import { BookOpen, CalendarRange, ConciergeBell, Inbox, Search, Tags } from "lucide-react";
+import { BookOpen, CalendarRange, ConciergeBell, Inbox, Search, Settings, Tags } from "lucide-react";
 
 import { HourglassMark } from "@/app/components/logo";
+import { UpdateLine } from "@/app/components/updates";
 import { ThemeToggle } from "@/app/theme";
 import { cn } from "@/lib/cn";
 import { hrefOf, useLinkHandler, type Route } from "@/lib/router";
@@ -8,8 +9,10 @@ import { useRpc } from "@/lib/use-rpc";
 import type { ReviewResult } from "@/types";
 
 /**
- * The side rail: the seven screens, with the review count as a plain number
- * beside its link. No chip, no dot: a number is enough.
+ * The side rail: the screens, with the review count as a plain number beside
+ * its link. No chip, no dot: a number is enough. At the foot, above the
+ * Settings link, one line when a plugin update is out (UpdateLine), where
+ * Fellowship puts its update button.
  */
 
 const LINKS: Array<{ route: Route; label: string; icon: typeof BookOpen }> = [
@@ -20,6 +23,8 @@ const LINKS: Array<{ route: Route; label: string; icon: typeof BookOpen }> = [
   { route: { name: "recall" }, label: "Recall inspector", icon: Search },
   { route: { name: "desk" }, label: "Front desk", icon: ConciergeBell },
 ];
+
+const SETTINGS: Route = { name: "settings" };
 
 export function Rail({ current }: { current: Route }) {
   const onLink = useLinkHandler();
@@ -63,7 +68,25 @@ export function Rail({ current }: { current: Route }) {
         })}
       </ul>
 
-      <div className="mt-auto flex items-center justify-between p-3 px-4">
+      <div className="mt-auto space-y-2 px-2 pt-3">
+        <UpdateLine />
+        <a
+          href={hrefOf(SETTINGS)}
+          onClick={onLink}
+          aria-current={current.name === "settings" ? "page" : undefined}
+          className={cn(
+            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm",
+            current.name === "settings"
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-muted-foreground hover:bg-sidebar-accent/60",
+          )}
+        >
+          <Settings className="size-4" aria-hidden />
+          <span className="flex-1">Settings</span>
+        </a>
+      </div>
+
+      <div className="flex items-center justify-between p-3 px-4">
         <span className="text-muted-foreground text-xs">Local only, 127.0.0.1</span>
         <ThemeToggle />
       </div>

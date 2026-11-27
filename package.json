@@ -17,6 +17,7 @@
     "desktop": "pnpm --filter @reverie/desktop app",
     "desktop:check": "pnpm --filter @reverie/desktop check",
     "pack:npm": "node scripts/pack-npm.mjs",
+    "release:app": "node scripts/release-app.mjs",
     "smoke:npm": "node scripts/smoke-npm.mjs",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
