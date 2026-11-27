@@ -1,6 +1,6 @@
 import { BookOpen, CalendarRange, ConciergeBell, Inbox, Search, Tags } from "lucide-react";
 
-import { ShelfMark } from "@/app/components/logo";
+import { HourglassMark } from "@/app/components/logo";
 import { ThemeToggle } from "@/app/theme";
 import { cn } from "@/lib/cn";
 import { hrefOf, useLinkHandler, type Route } from "@/lib/router";
@@ -29,7 +29,7 @@ export function Rail({ current }: { current: Route }) {
   return (
     <nav aria-label="Screens" className="bg-sidebar border-sidebar-border flex w-56 shrink-0 flex-col border-r">
       <a href="/" onClick={onLink} className="text-sidebar-foreground flex items-center gap-2 px-4 py-4">
-        <ShelfMark className="size-7 shrink-0" />
+        <HourglassMark className="size-7 shrink-0" />
         <span className="font-heading text-base font-semibold tracking-tight">Reverie</span>
       </a>
 

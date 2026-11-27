@@ -1,16 +1,19 @@
 /**
- * The Reverie mark: three spines on a shelf and one leaning, the library the
- * app is. Fixed colours, so it reads the same in both themes. The same
- * drawing is public/favicon.svg.
+ * The Reverie mark: an hourglass, time settling into something kept. The
+ * glass and sand have fixed colours; the two caps take the text colour, so
+ * the mark reads in both themes. public/favicon.svg is the same drawing.
  */
-export function ShelfMark({ className }: { className?: string }) {
+export function HourglassMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true" focusable="false">
-      <rect x="10" y="12" width="9" height="40" rx="2" fill="#3f4f8f" />
-      <rect x="22" y="18" width="9" height="34" rx="2" fill="#7c8ac4" />
-      <rect x="34" y="12" width="9" height="40" rx="2" fill="#3f4f8f" />
-      <rect x="45" y="16" width="9" height="36" rx="2" transform="rotate(12 49.5 34)" fill="#ecc59a" />
-      <rect x="6" y="52" width="52" height="3" rx="1.5" fill="#7a7b80" />
+      <path
+        d="M16 10H48C48 22 38 26 34 32C38 38 48 42 48 54H16C16 42 26 38 30 32C26 26 16 22 16 10Z"
+        fill="#4f9a68"
+      />
+      <path d="M22 14H42C40 20 35 23 32 27C29 23 24 20 22 14Z" fill="#a3d9b0" />
+      <path d="M20 54C21 47 27 44 32 40C37 44 43 47 44 54Z" fill="#ecc59a" />
+      <rect x="12" y="6" width="40" height="4.5" rx="2.25" fill="currentColor" />
+      <rect x="12" y="53.5" width="40" height="4.5" rx="2.25" fill="currentColor" />
     </svg>
   );
 }

@@ -37,12 +37,12 @@
         animation: rise 600ms cubic-bezier(.2, .7, .2, 1) both;
       }
       .mark { width: 168px; height: 168px; }
-      .leaning {
+      .sand {
         transform-box: fill-box;
         transform-origin: 50% 100%;
         animation: settle 2.8s ease-in-out infinite;
       }
-      .shelf { fill: var(--ink); }
+      .cap { fill: var(--ink); }
       .name { font-size: 38px; font-weight: 650; letter-spacing: -0.02em; margin: 0; }
       .by { font-size: 15px; color: var(--muted); margin: -12px 0 0; letter-spacing: 0.01em; }
       @keyframes rise {
@@ -50,17 +50,17 @@
         to { opacity: 1; transform: none; }
       }
       @keyframes settle {
-        0%, 100% { transform: rotate(0deg); }
-        50% { transform: rotate(-3deg); }
+        0%, 100% { transform: scaleY(0.82); }
+        50% { transform: scaleY(1); }
       }
       @media (prefers-reduced-motion: reduce) {
-        .splash, .leaning { animation: none; }
+        .splash, .sand { animation: none; }
       }
     </style>
   </head>
   <body>
     <main class="splash" aria-label="Reverie by starside.io, starting">
-      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="9" height="40" rx="2" fill="#3f4f8f"/><rect x="22" y="18" width="9" height="34" rx="2" fill="#7c8ac4"/><rect x="34" y="12" width="9" height="40" rx="2" fill="#3f4f8f"/><g class="leaning"><rect x="45" y="16" width="9" height="36" rx="2" transform="rotate(12 49.5 34)" fill="#ecc59a"/></g><rect class="shelf" x="6" y="52" width="52" height="3" rx="1.5"/></svg>
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M16 10H48C48 22 38 26 34 32C38 38 48 42 48 54H16C16 42 26 38 30 32C26 26 16 22 16 10Z" fill="#4f9a68"/><path d="M22 14H42C40 20 35 23 32 27C29 23 24 20 22 14Z" fill="#a3d9b0"/><g class="sand"><path d="M20 54C21 47 27 44 32 40C37 44 43 47 44 54Z" fill="#ecc59a"/></g><rect x="12" y="6" width="40" height="4.5" rx="2.25" class="cap"/><rect x="12" y="53.5" width="40" height="4.5" rx="2.25" class="cap"/></svg>
       <p class="name">Reverie</p>
       <p class="by">by starside.io</p>
     </main>
