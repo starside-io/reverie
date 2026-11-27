@@ -46,10 +46,13 @@ done
 
 {
   # The app, if open: where it was opened from, so the same bundle reopens.
-  app_pid=$(pgrep -f '/Reverie.app/Contents/MacOS/reverie-desktop' | head -n 1)
+  # Matched by process name, not by command line: a shell or an editor whose
+  # arguments merely mention the app's path must not be taken for the app.
+  app_pid=$(pgrep -x reverie-desktop | head -n 1)
   app_path=""
   if [ -n "$app_pid" ]; then
-    app_path=$(ps -o command= -p "$app_pid" | sed 's#/Contents/MacOS/reverie-desktop.*##')
+    app_path=$(ps -o comm= -p "$app_pid" | sed 's#/Contents/MacOS/reverie-desktop.*##')
+    case "$app_path" in *.app) ;; *) app_path="" ;; esac
     echo "=== quitting Reverie.app (pid $app_pid)"
     osascript -e 'tell application id "dev.reverie.desktop" to quit' || kill "$app_pid"
     waited=0
